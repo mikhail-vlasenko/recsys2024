@@ -18,7 +18,7 @@ parser.add_argument('--aggregator', type=str, default='neighbor', help='which ag
 parser.add_argument('--n_epochs', type=int, default=1, help='the number of epochs')
 parser.add_argument('--user_neighbor', type=int, default=30, help='the number of neighbors to be sampled')
 parser.add_argument('--news_neighbor', type=int, default=10, help='the number of neighbors to be sampled')
-parser.add_argument('--entity_neighbor', type=int, default=1, help='the number of neighbors to be sampled')
+parser.add_argument('--entity_neighbor', type=int, default=1, help='the number of neighbors to be sampled') #whats this one
 parser.add_argument('--user_dim', type=int, default=128, help='dimension of user and entity embeddings')
 parser.add_argument('--cnn_out_size', type=int, default=128, help='dimension of cnn output')
 parser.add_argument('--n_iter', type=int, default=2, help='number of iterations when computing entity representation')

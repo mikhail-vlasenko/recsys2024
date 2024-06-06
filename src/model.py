@@ -85,6 +85,7 @@ class Model(object):
         self.scores_normalized = tf.sigmoid(self.scores)
         self.predict_label = tf.cast(self.scores > 0.5, tf.int32)
         print('build tensor graph over!')
+
     def build_train(self):
         total_loss = tf.nn.sigmoid_cross_entropy_with_logits(labels=self.labels, logits=self.scores)
 
@@ -135,6 +136,8 @@ class Model(object):
         loss = user_infer_loss + news_infer_loss
 
         return loss, ret_uw
+
+        
     def get_neighbors(self, news_seeds, user_seeds):
         news_seeds = tf.expand_dims(news_seeds, axis=1)
         user_seeds = tf.expand_dims(user_seeds, axis=1)
