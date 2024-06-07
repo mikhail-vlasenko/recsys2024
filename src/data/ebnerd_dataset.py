@@ -117,11 +117,12 @@ class EbnerdDataset(Dataset):
 
     @classmethod
     def download_and_extract(cls, root_dir: str, data_download_path: str):
-        zipfile_name = data_download_path.split("/")[-1]
+        zipfile_name = data_download_path.split("/")[-1].split("?")[0]
         folder_name = data_download_path.split("/")[-1].split(".")[0]
 
         root_dir = Path(root_dir)
-        data_dir = root_dir / "data"
+        data_dir = root_dir
+        data_dir.mkdir(parents=True, exist_ok=True)
 
         out_folder = data_dir / folder_name
         if out_folder.exists():
