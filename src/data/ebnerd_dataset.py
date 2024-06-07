@@ -62,7 +62,7 @@ class EbnerdDataset(Dataset):
        
         return row
 
-    def ebnerd_from_path(path: Path, mode: str, data_split, history_size: int = 30, fraction = 0.1) -> pl.DataFrame:
+    def ebnerd_from_path(self, path: Path, mode: str, data_split, history_size: int = 30, fraction = 0.1) -> pl.DataFrame:
         """
         Load ebnerd - function
         # I could add something here to select columns but I dont think its necessary for now, makes more sense to do in the loader overwrite
