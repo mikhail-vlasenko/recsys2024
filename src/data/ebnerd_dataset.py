@@ -13,6 +13,7 @@ from transformers import AutoTokenizer, AutoModel
 from pathlib import Path
 import tensorflow as tf
 import polars as pl
+import numpy as np
 
 from src.ebrec.utils._constants import (
     DEFAULT_HISTORY_ARTICLE_ID_COL,
@@ -48,7 +49,7 @@ class EbnerdDataset(Dataset):
     def __init__(self, root_dir, data_split, mode = "train", history_size = 30, fraction = 0.1):
 
         self.save_hyperparameters(logger=False)
-        self.df_behaviors, self.df_history = self.ebnerd_from_path(path=self.hparams.root_dir, history_size=self.hparams.history_size, mode=mode, data_split=data_split, fraction=self.hparams.fraction)
+        self.df_behaviors, self.df_history = self.ebnerd_from_path(path=self.hparams.root_dir, history_size=self.hparams.history_size, mode=self.hparams.mode, data_split=self.hparams.data_split, fraction=self.hparams.fraction)
 
     def __len__(self):
         return len(self.df_behaviors)
