@@ -1,6 +1,6 @@
 # TODO make a notebook with it
-from ebrec.models.newsrec.model_config import hparams_naml
-from ebrec.models.newsrec.naml import NAMLModel
+from src.ebrec.models.newsrec.model_config import hparams_naml
+from src.ebrec.models.newsrec.naml import NAMLModel
 import numpy as np
 
 config = hparams_naml

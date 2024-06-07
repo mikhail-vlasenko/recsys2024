@@ -1,6 +1,6 @@
 # TODO make a notebook with it
-from ebrec.models.newsrec.nrms_docvec import NRMSModel_docvec
-from ebrec.models.newsrec.model_config import hparams_nrms
+from src.ebrec.models.newsrec.nrms_docvec import NRMSModel_docvec
+from src.ebrec.models.newsrec.model_config import hparams_nrms
 import numpy as np
 
 DOCVEC_DIM = 300

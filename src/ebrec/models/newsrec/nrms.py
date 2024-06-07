@@ -1,6 +1,6 @@
 # Copyright (c) Microsoft Corporation. All rights reserved.
 # Licensed under the MIT License.
-from ebrec.models.newsrec.layers import AttLayer2, SelfAttention
+from src.ebrec.models.newsrec.layers import AttLayer2, SelfAttention
 import tensorflow as tf
 import numpy as np
 

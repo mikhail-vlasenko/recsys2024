@@ -1,6 +1,6 @@
 # TODO make a notebook with it
-from ebrec.models.newsrec.model_config import hparams_lstur
-from ebrec.models.newsrec.lstur import LSTURModel
+from src.ebrec.models.newsrec.model_config import hparams_lstur
+from src.ebrec.models.newsrec.lstur import LSTURModel
 import numpy as np
 
 config = hparams_lstur

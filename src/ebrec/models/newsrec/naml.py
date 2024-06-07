@@ -4,8 +4,8 @@ from tensorflow.keras import layers
 import tensorflow.keras as keras
 import numpy as np
 
-from ebrec.models.newsrec.base_model import BaseModel
-from ebrec.models.newsrec.layers import AttLayer2
+from src.ebrec.models.newsrec.base_model import BaseModel
+from src.ebrec.models.newsrec.layers import AttLayer2
 
 __all__ = ["NAMLModel"]
 

@@ -2,18 +2,18 @@ from pathlib import Path
 import polars as pl
 import numpy as np
 
-from ebrec.models.newsrec.dataloader import (
+from src.ebrec.models.newsrec.dataloader import (
     LSTURDataLoader,
     NRMSDataLoader,
 )
-from ebrec.utils._behaviors import create_user_id_to_int_mapping
-from ebrec.utils._articles import create_article_id_to_value_mapping
+from src.ebrec.utils._behaviors import create_user_id_to_int_mapping
+from src.ebrec.utils._articles import create_article_id_to_value_mapping
 
-from ebrec.utils._python import time_it
+from src.ebrec.utils._python import time_it
 from tqdm import tqdm
 
-from ebrec.utils._behaviors import create_binary_labels_column
-from ebrec.utils._constants import (
+from src.ebrec.utils._behaviors import create_binary_labels_column
+from src.ebrec.utils._constants import (
     DEFAULT_HISTORY_ARTICLE_ID_COL,
     DEFAULT_CLICKED_ARTICLES_COL,
     DEFAULT_INVIEW_ARTICLES_COL,
@@ -22,7 +22,7 @@ from ebrec.utils._constants import (
     DEFAULT_USER_COL,
 )
 
-from ebrec.models.fastformer.dataloader import FastformerDataset
+from src.ebrec.models.fastformer.dataloader import FastformerDataset
 from torch.utils.data import DataLoader
 
 N_ITERATIONS = 300

@@ -1,6 +1,6 @@
 # TODO make a notebook with it
-from ebrec.models.newsrec.model_config import hparams_nrms
-from ebrec.models.newsrec.nrms import NRMSModel
+from src.ebrec.models.newsrec.model_config import hparams_nrms
+from src.ebrec.models.newsrec.nrms import NRMSModel
 import numpy as np
 
 config = hparams_nrms

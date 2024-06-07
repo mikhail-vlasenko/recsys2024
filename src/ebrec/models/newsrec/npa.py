@@ -5,8 +5,8 @@ import tensorflow.keras as keras
 import tensorflow as tf
 import numpy as np
 
-from ebrec.models.newsrec.layers import PersonalizedAttentivePooling
-from ebrec.models.newsrec.base_model import BaseModel
+from src.ebrec.models.newsrec.layers import PersonalizedAttentivePooling
+from src.ebrec.models.newsrec.base_model import BaseModel
 
 __all__ = ["NPAModel"]
 

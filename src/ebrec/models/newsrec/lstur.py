@@ -1,7 +1,7 @@
 # Copyright (c) Microsoft Corporation. All rights reserved.
 # Licensed under the MIT License.
-from ebrec.models.newsrec.layers import AttLayer2, ComputeMasking, OverwriteMasking
-from ebrec.models.newsrec.base_model import BaseModel
+from src.ebrec.models.newsrec.layers import AttLayer2, ComputeMasking, OverwriteMasking
+from src.ebrec.models.newsrec.base_model import BaseModel
 from tensorflow.keras import layers
 import tensorflow.keras as keras
 

@@ -10,18 +10,18 @@ import torch.optim as optim
 import torch.nn as nn
 import torch
 
-from ebrec.utils._constants import DEFAULT_INVIEW_ARTICLES_COL, DEFAULT_LABELS_COL
+from src.ebrec.utils._constants import DEFAULT_INVIEW_ARTICLES_COL, DEFAULT_LABELS_COL
 
-from ebrec.utils._python import (
+from src.ebrec.utils._python import (
     repeat_by_list_values_from_matrix,
     convert_to_nested_list,
     create_lookup_objects,
 )
-from ebrec.utils._articles_behaviors import map_list_article_id_to_value
-from ebrec.utils._polars import shuffle_rows
+from src.ebrec.utils._articles_behaviors import map_list_article_id_to_value
+from src.ebrec.utils._polars import shuffle_rows
 
-from ebrec.evaluation import AucScore
-from ebrec.utils._torch import save_checkpoint
+from src.ebrec.evaluation import AucScore
+from src.ebrec.utils._torch import save_checkpoint
 
 
 @dataclass
