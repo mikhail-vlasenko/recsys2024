@@ -1,8 +1,14 @@
 import argparse
+import pickle
+
 import numpy as np
 import time
-from data_loader import load_data, load_new_data
-from train import train
+
+import torch
+
+from data_loader import load_new_data
+from src.model import Model
+from train import train_model
 import os
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '0'
 os.environ["CUDA_VISIBLE_DEVICES"] = "1"
@@ -41,16 +47,23 @@ parser.add_argument('--routit', type=int, default=7,
 parser.add_argument('--balance', type=float, default=0.004, help='learning rate')  #3e-4
 parser.add_argument('--version', type=int, default=0,
                         help='Different version under the same set')
+parser.add_argument('--dropout_rate', type=float, default=0.3, help='dropout rate')
+
 
 show_loss = True
 show_time = False
 
-#t = time()
-
 args = parser.parse_args()
-# data = load_data(args)
-data = load_new_data(args)
-train(args, data, show_loss)
+#
+# data_tuple = load_new_data(args)
+#
+# with open('data.pkl', 'wb') as f:
+#     pickle.dump(data_tuple, f)
 
-#if show_time:
-#    print('time used: %d s' % (time() - t))
+with open('data.pkl', 'rb') as f:
+    data_tuple = pickle.load(f)
+
+train_data, eval_data, test_data, train_user_news, train_news_user, test_user_news, test_news_user, news_title, news_entity, news_group = data_tuple
+
+model = Model(args, torch.tensor(news_title), torch.tensor(news_entity), torch.tensor(news_group), len(train_user_news), len(news_title))
+trained_model = train_model(args, model, train_data, eval_data, test_data, train_user_news, train_news_user, test_user_news, test_news_user, news_title, news_entity, news_group)
