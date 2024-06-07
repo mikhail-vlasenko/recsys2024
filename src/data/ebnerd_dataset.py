@@ -7,6 +7,7 @@ from typing import Optional
 import torch
 from typing import Union
 from torch import Tensor
+from torch.utils.data import Dataset
 
 from transformers import AutoTokenizer, AutoModel
 from pathlib import Path
@@ -42,7 +43,7 @@ from src.ebrec.models.newsrec.dataloader import NRMSDataLoader
 from src.ebrec.models.newsrec.model_config import hparams_nrms
 from src.ebrec.models.newsrec import NRMSModel
 
-class EbnerdDataset():
+class EbnerdDataset(Dataset):
 
     def __init__(self, root_dir, data_split, mode = "train", history_size = 30, fraction = 0.1):
 
