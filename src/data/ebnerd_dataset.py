@@ -140,7 +140,7 @@ class EbnerdDataset(Dataset):
         (data_dir / zipfile_name).unlink()
 
         #also download the test set
-        test_set_path = "https://ebnerd-dataset.s3.eu-west1.amazonaws.com/ebnerd_testset.zip"
+        test_set_path = "https://huggingface.co/datasets/glasswhiteboard/ebnerd/resolve/main/ebnerd_testset.zip?download=true"
         r = requests.get(test_set_path, allow_redirects=True)
         with open(data_dir / "ebnerd_testset.zip", "wb") as f:
             f.write(r.content)
