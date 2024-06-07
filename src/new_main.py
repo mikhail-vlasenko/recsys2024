@@ -6,7 +6,7 @@ import wandb
 def main():
     args = get_training_args()
 
-    data_download_path = EbnerdVariants.init_variant(args.ebnerd_variant).path
+    data_download_path = EbnerdVariants.init_variant(args.ebnerd_variant).member.path
 
     datamodule = OriginalModelDatamodule(data_download_path=data_download_path, batch_size=args.batch_size, num_workers=args.num_workers)
 
