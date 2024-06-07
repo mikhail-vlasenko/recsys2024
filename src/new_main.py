@@ -1,4 +1,4 @@
-from src.utils import get_training_args
+from src.utils.get_training_args import get_training_args
 from src.data.original_model_datamodule import OriginalModelDatamodule
 from src.data.ebnerd_variants import EbnerdVariants
 import wandb
