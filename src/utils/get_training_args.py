@@ -11,6 +11,10 @@ def get_training_args():
         default=EbnerdVariants.get_default_variant(),
     )
 
+    parser.add_argument("--batch_size", type=int, default=64)
+    parser.add_argument("--num_workers", type=int, default=2)
+
+    #graph method specific arguments 
     parser.add_argument('--dataset', type=str, default='ten_week', help='which dataset to use')
     parser.add_argument('--title_len', type=int, default=10, help='the max length of title')
     parser.add_argument('--session_len', type=int, default=10, help='the max length of session')
