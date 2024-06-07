@@ -11,7 +11,7 @@ class ImageNetVariant:
 class EbnerdVariants(Enum):
     EbnerdDemo = ImageNetVariant(
         name="ebnerd_demo",
-        path="https://ebnerd-dataset.s3.eu-west1.amazonaws.com/ebnerd_demo.zip"
+        path="https://huggingface.co/datasets/glasswhiteboard/ebnerd/blob/main/ebnerd_demo.zip?download=true"
     )
 
     EbnerdSmall = ImageNetVariant(
