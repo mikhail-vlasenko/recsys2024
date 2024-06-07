@@ -47,7 +47,7 @@ from src.ebrec.models.newsrec import NRMSModel
 class EbnerdDataset(Dataset):
 
     def __init__(self, root_dir, data_split, mode = "train", history_size = 30, fraction = 0.1):
-
+        super().__init__()
         self.save_hyperparameters(logger=False)
         self.df_behaviors, self.df_history = self.ebnerd_from_path(path=self.hparams.root_dir, history_size=self.hparams.history_size, mode=self.hparams.mode, data_split=self.hparams.data_split, fraction=self.hparams.fraction)
 
