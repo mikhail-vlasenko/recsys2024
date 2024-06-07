@@ -14,6 +14,9 @@ def get_training_args():
     parser.add_argument("--batch_size", type=int, default=128)
     parser.add_argument("--num_workers", type=int, default=2)
 
+    #hugging face
+    parser.add_argument("--api_key", type=str, default=None, help="Hugging Face API key")
+
     #graph method specific arguments 
     parser.add_argument('--dataset', type=str, default='ten_week', help='which dataset to use')
     parser.add_argument('--title_len', type=int, default=10, help='the max length of title')

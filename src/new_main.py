@@ -8,7 +8,7 @@ def main():
 
     data_download_path = EbnerdVariants.init_variant(args.ebnerd_variant).value.path
 
-    datamodule = OriginalModelDatamodule(data_download_path=data_download_path, batch_size=args.batch_size, num_workers=args.num_workers)
+    datamodule = OriginalModelDatamodule(data_download_path=data_download_path, batch_size=args.batch_size, num_workers=args.num_workers, api_key=args.api_key)
 
     wandb.login()
 

@@ -67,8 +67,10 @@ class EbnerdDataset(Dataset):
         Load ebnerd - function
         # I could add something here to select columns but I dont think its necessary for now, makes more sense to do in the loader overwrite
         """
+        print(f'processing {mode} data')
         if mode == "test":
-            path = Path(path) / data_split 
+            path = Path(path) / 'ebnerd_testset' / mode
+            return None, None
         else:
             path = Path(path) / data_split / mode
         
@@ -116,9 +118,13 @@ class EbnerdDataset(Dataset):
         return df_behaviors, df_history
 
     @classmethod
-    def download_and_extract(cls, root_dir: str, data_download_path: str):
+    def download_and_extract(cls, root_dir: str, data_download_path: str, api_key: str):
         zipfile_name = data_download_path.split("/")[-1].split("?")[0]
         folder_name = data_download_path.split("/")[-1].split(".")[0]
+
+        headers = {
+            "Authorization": f"Bearer {api_key}"
+        }
 
         root_dir = Path(root_dir)
         data_dir = root_dir
@@ -131,18 +137,18 @@ class EbnerdDataset(Dataset):
 
         print(f"Downloading and extracting data to {out_folder}")
 
-        r = requests.get(data_download_path, allow_redirects=True)
+        r = requests.get(data_download_path, headers=headers, allow_redirects=True)
 
         with open(data_dir / zipfile_name, "wb") as f:
             f.write(r.content)
         with zipfile.ZipFile(data_dir / zipfile_name, "r") as zip_ref:
-            zip_ref.extractall(data_dir)
+            zip_ref.extractall(out_folder)
         # remove the zip file
         (data_dir / zipfile_name).unlink()
 
         #also download the test set
-        test_set_path = "https://huggingface.co/datasets/glasswhiteboard/ebnerd/resolve/main/ebnerd_testset.zip?download=true"
-        r = requests.get(test_set_path, allow_redirects=True)
+        test_set_path = "https://huggingface.co/datasets/recsys2024/ebnerd/resolve/main/ebnerd_testset.zip?download=true"
+        r = requests.get(test_set_path, headers=headers, allow_redirects=True)
         with open(data_dir / "ebnerd_testset.zip", "wb") as f:
             f.write(r.content)
         with zipfile.ZipFile(data_dir / "ebnerd_testset.zip", "r") as zip_ref:

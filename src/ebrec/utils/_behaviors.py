@@ -94,7 +94,7 @@ def create_binary_labels_column(
     _COLUMNS = df.columns
     GROUPBY_ID = generate_unique_name(_COLUMNS, "_groupby_id")
 
-    df = df.with_row_index(GROUPBY_ID)
+    df = df.with_row_count(GROUPBY_ID)
 
     if shuffle:
         df = shuffle_list_column(df, column=inview_col, seed=seed)

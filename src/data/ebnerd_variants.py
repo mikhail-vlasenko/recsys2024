@@ -11,12 +11,12 @@ class ImageNetVariant:
 class EbnerdVariants(Enum):
     EbnerdDemo = ImageNetVariant(
         name="ebnerd_demo",
-        path="https://huggingface.co/datasets/glasswhiteboard/ebnerd/resolve/main/ebnerd_demo.zip?download=true"
+        path="https://huggingface.co/datasets/recsys2024/ebnerd/resolve/main/ebnerd_demo.zip?download=true"
     )
 
     EbnerdSmall = ImageNetVariant(
         name="ebnerd_small",
-        path="https://ebnerd-dataset.s3.eu-west1.amazonaws.com/ebnerd_small.zip"
+        path="https://huggingface.co/datasets/recsys2024/ebnerd/resolve/main/ebnerd_small.zip?download=true"
     )
 
     EbnerdLarge = ImageNetVariant(
@@ -26,7 +26,7 @@ class EbnerdVariants(Enum):
 
     EbnerdLargeArticles = ImageNetVariant(
         name="ebnerd_large_articles",
-        path="https://ebnerd-dataset.s3.eu-west1.amazonaws.com/articles_large_only.zip"
+        path="https://huggingface.co/datasets/recsys2024/ebnerd/resolve/main/articles_large_only.zip?download=true"
     )
 
 

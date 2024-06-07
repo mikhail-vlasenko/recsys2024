@@ -10,6 +10,7 @@ class OriginalModelDatamodule(LightningDataModule):
     def __init__(
         self,
         data_download_path: str,
+        api_key: str,
         root_dir: str = "data/",
         batch_size: int = 64,
         num_workers: int = 1,
@@ -30,7 +31,7 @@ class OriginalModelDatamodule(LightningDataModule):
         self.batch_size_per_device = batch_size
     
     def prepare_data(self) -> None:
-        EbnerdDataset.download_and_extract(root_dir=self.hparams.root_dir, data_download_path=self.hparams.data_download_path)
+        EbnerdDataset.download_and_extract(root_dir=self.hparams.root_dir, data_download_path=self.hparams.data_download_path, api_key=self.hparams.api_key)
 
     def setup(self, stage: Optional[str] = None) -> None:
         self.prepare_data()
@@ -47,7 +48,7 @@ class OriginalModelDatamodule(LightningDataModule):
         # load and split datasets only if not loaded already
         if not self.data_train and not self.data_val and not self.data_test:
             self.data_train: Optional[Dataset] = EbnerdDataset(root_dir=self.hparams.root_dir, data_split=self.data_split, mode="train")
-            self.data_val: Optional[Dataset] = EbnerdDataset(root_dir=self.hparams.root_dir, data_split=self.data_split, mode="val")
+            self.data_val: Optional[Dataset] = EbnerdDataset(root_dir=self.hparams.root_dir, data_split=self.data_split, mode="validation")
             self.data_test: Optional[Dataset] = EbnerdDataset(root_dir=self.hparams.root_dir, data_split=self.data_split, mode="test")
 
     def train_dataloader(self) -> DataLoader[Any]:
