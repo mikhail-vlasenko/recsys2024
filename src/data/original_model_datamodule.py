@@ -23,9 +23,9 @@ class OriginalModelDatamodule(LightningDataModule):
         self.data_split = data_download_path.split("/")[-1].split(".")[0]
 
         # data transformations
-        self.data_train: Optional[Dataset] = EbnerdDataset(root_dir=self.hparams.root_dir, data_split=self.data_split, mode="train")
-        self.data_val: Optional[Dataset] = EbnerdDataset(root_dir=self.hparams.root_dir, data_split=self.data_split, mode="val")
-        self.data_test: Optional[Dataset] = EbnerdDataset(root_dir=self.hparams.root_dir, data_split=self.data_split, mode="test")
+        self.data_train: Optional[Dataset] = None
+        self.data_val: Optional[Dataset] = None
+        self.data_test: Optional[Dataset] = None
 
         self.batch_size_per_device = batch_size
     
@@ -33,6 +33,7 @@ class OriginalModelDatamodule(LightningDataModule):
         EbnerdDataset.download_and_extract(root_dir=self.hparams.root_dir, data_download_path=self.hparams.data_download_path)
 
     def setup(self, stage: Optional[str] = None) -> None:
+        self.prepare_data()
         # Divide batch size by the number of devices.
         if self.trainer is not None:
             if self.hparams.batch_size % self.trainer.world_size != 0:
