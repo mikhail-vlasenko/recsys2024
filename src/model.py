@@ -65,13 +65,10 @@ class Model(nn.Module):
         self.conv_layers['title'] = nn.Conv2d(1, 8, kernel_size=(2, 20))
 
         self.pool_item = nn.MaxPool2d(kernel_size=(3, 2), stride=(2, 2))
-        self.pool_title = nn.MaxPool2d(kernel_size=(2, 1))
+        self.pool_title = nn.MaxPool2d(kernel_size=(2, 1), stride=(1, 2))
 
         self.dense = nn.Linear(self.input_size_item + self.input_size_title, self.cnn_out_size)
 
-        self.build_train()
-
-    def build_train(self):
         self.optimizer = torch.optim.Adam(self.parameters(), lr=self.lr)
 
     def forward(self, user_indices, news_indices, labels):
@@ -279,17 +276,19 @@ class Model(nn.Module):
         # in tf1 conv input is NHWC, not NCHW
         item_group_embed = item_group_embed.permute(0, 3, 1, 2)
         conv_item = self.conv_layers['item'](item_group_embed)
-
         h_item = F.relu(conv_item)
+
         pooled_item = self.pool_item(h_item)
         # and put it back to NHWC for consistency
         pooled_item = pooled_item.permute(0, 2, 3, 1)
-
         pool_item = pooled_item.reshape(self.batch_size, -1, self.input_size_item)
 
+        title_embed = title_embed.permute(0, 3, 1, 2)
         conv_title = self.conv_layers['title'](title_embed)
         h_title = F.relu(conv_title)
+
         pooled_title = self.pool_title(h_title)
+        pooled_title = pooled_title.permute(0, 2, 3, 1)
         pool_title = pooled_title.reshape(self.batch_size, -1, self.input_size_title)
 
         pooled = torch.cat((pool_item, pool_title), -1)
