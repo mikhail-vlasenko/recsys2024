@@ -61,10 +61,10 @@ class Model(nn.Module):
         # self.user_emb_matrix = F.normalize(self.user_emb_matrix, dim=-1)
         # self.word_emb_matrix = F.normalize(self.word_emb_matrix, dim=-1)
 
-        self.conv_layers['item'] = nn.Conv2d(1, 8, kernel_size=(40, 20))
+        self.conv_layers['item'] = nn.Conv2d(1, 8, kernel_size=(40, 20), stride=(1, 2))
         self.conv_layers['title'] = nn.Conv2d(1, 8, kernel_size=(2, 20))
 
-        self.pool_item = nn.MaxPool2d(kernel_size=(3, 2))
+        self.pool_item = nn.MaxPool2d(kernel_size=(3, 2), stride=(2, 2))
         self.pool_title = nn.MaxPool2d(kernel_size=(2, 1))
 
         self.dense = nn.Linear(self.input_size_item + self.input_size_title, self.cnn_out_size)
@@ -276,9 +276,15 @@ class Model(nn.Module):
         group_embed = F.embedding(group_lookup, self.group_embedding).unsqueeze(2)
         item_group_embed = torch.cat((item_embed, group_embed), 2).reshape(-1, 80, 50).unsqueeze(-1)
 
+        # in tf1 conv input is NHWC, not NCHW
+        item_group_embed = item_group_embed.permute(0, 3, 1, 2)
         conv_item = self.conv_layers['item'](item_group_embed)
+
         h_item = F.relu(conv_item)
         pooled_item = self.pool_item(h_item)
+        # and put it back to NHWC for consistency
+        pooled_item = pooled_item.permute(0, 2, 3, 1)
+
         pool_item = pooled_item.reshape(self.batch_size, -1, self.input_size_item)
 
         conv_title = self.conv_layers['title'](title_embed)
