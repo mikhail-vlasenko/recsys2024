@@ -20,9 +20,6 @@ def train_model(args, model, train_data, eval_data, test_data, train_user_news, 
 
     train_data = np.array(train_data[:, [0, 1, 3]], dtype=np.int32)
 
-    train_user_news, train_news_user = train_random_neighbor(args, train_user_news, train_news_user, len(news_title))
-    test_user_news, test_news_user = test_random_neighbor(args, test_user_news, test_news_user, len(news_title))
-
     train_dataset = TensorDataset(
         torch.tensor(train_data[:, 0], dtype=torch.long),
         torch.tensor(train_data[:, 1], dtype=torch.long),
@@ -48,10 +45,17 @@ def train_model(args, model, train_data, eval_data, test_data, train_user_news, 
         model.train()
         total_loss = 0
         for user_indices, news_indices, labels in train_loader:
+            train_user_news, train_news_user = train_random_neighbor(args, train_user_news, train_news_user,
+                                                                     len(news_title))
+
             user_indices, news_indices, labels = user_indices.to(device), news_indices.to(device), labels.to(device)
+            train_user_news, train_news_user = torch.tensor(train_user_news, dtype=torch.long).to(device), torch.tensor(
+                train_news_user, dtype=torch.long).to(device)
 
             # optimizer.zero_grad()
-            loss, scores_normalized, predict_label = model(user_indices, news_indices, labels)
+            loss, scores_normalized, predict_label = model(
+                user_indices, news_indices, train_user_news, train_news_user, labels
+            )
             # loss.backward()
             # optimizer.step()
             total_loss += loss.item()

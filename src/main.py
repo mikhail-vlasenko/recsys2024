@@ -54,14 +54,17 @@ show_loss = True
 show_time = False
 
 args = parser.parse_args()
-#
-data_tuple = load_new_data(args)
-#
-with open('data.pkl', 'wb') as f:
-     pickle.dump(data_tuple, f)
 
-#with open('data.pkl', 'rb') as f:
-#    data_tuple = pickle.load(f)
+fast_load_path = 'data.pkl'
+
+if not os.path.exists(fast_load_path):
+    data_tuple = load_new_data(args)
+
+    with open(fast_load_path, 'wb') as f:
+        pickle.dump(data_tuple, f)
+
+with open(fast_load_path, 'rb') as f:
+    data_tuple = pickle.load(f)
 
 train_data, eval_data, test_data, train_user_news, train_news_user, test_user_news, test_news_user, news_title, news_entity, news_group = data_tuple
 

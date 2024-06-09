@@ -57,22 +57,12 @@ class Model(nn.Module):
         self.conv_layers = nn.ModuleDict()
         self.build_model()
 
-        #add learned parameter matrices (for embeddings mostely I think)
-        self.user_indices = nn.Parameter(torch.zeros(self.batch_size, dtype=torch.float64), requires_grad=True)
-        self.news_indices = nn.Parameter(torch.zeros(self.batch_size, dtype=torch.float64), requires_grad=True)
-        self.labels = nn.Parameter(torch.zeros(self.batch_size, dtype=torch.float64), requires_grad=True)
-        self.user_news = nn.Parameter(torch.zeros((self.n_user, self.news_neighbor), dtype=torch.float64), requires_grad=True)
-        self.news_user = nn.Parameter(torch.zeros((self.n_news, self.user_neighbor), dtype=torch.float64), requires_grad=True)
-
-
-
-
     def build_model(self):
         # self.user_emb_matrix = F.normalize(self.user_emb_matrix, dim=-1)
         # self.word_emb_matrix = F.normalize(self.word_emb_matrix, dim=-1)
 
-        self.conv_layers['item'] = nn.Conv2d(1, 8, kernel_size=(40, 20), stride=(2, 2)) # you had this as stride=(1,2) before idk why
-        self.conv_layers['title'] = nn.Conv2d(1, 8, kernel_size=(2, 20), stride=(2,2))
+        self.conv_layers['item'] = nn.Conv2d(1, 8, kernel_size=(40, 20), stride=(2, 2))
+        self.conv_layers['title'] = nn.Conv2d(1, 8, kernel_size=(2, 20), stride=(2, 2))
 
         self.pool_item = nn.MaxPool2d(kernel_size=(3, 2), stride=(2, 2))
         self.pool_title = nn.MaxPool2d(kernel_size=(2, 1), stride=(1, 2))
@@ -81,8 +71,8 @@ class Model(nn.Module):
 
         self.optimizer = torch.optim.Adam(self.parameters(), lr=self.lr)
 
-    def forward(self, user_indices, news_indices, labels):
-        newsvec, uservec = self.get_neighbors(news_indices, user_indices)
+    def forward(self, user_indices, news_indices, user_news, news_user, labels):
+        newsvec, uservec = self.get_neighbors(news_indices, user_indices, news_user, user_news)
         news_embeddings, user_embeddings, aggregators = self.aggregate(newsvec, uservec)
 
         scores = torch.squeeze(self.simple_dot_net(user_embeddings, news_embeddings))
@@ -129,7 +119,7 @@ class Model(nn.Module):
 
         return loss, ret_uw
 
-    def get_neighbors(self, news_seeds, user_seeds):
+    def get_neighbors(self, news_seeds, user_seeds, news_user, user_news):
         news_seeds = news_seeds.unsqueeze(1)
         user_seeds = user_seeds.unsqueeze(1)
         news = [news_seeds]
@@ -147,13 +137,13 @@ class Model(nn.Module):
         news_hop_vectors = self.convolution(news[0]).reshape(-1, self.cnn_out_size)
         news_hop_vectors = F.relu(torch.matmul(news_hop_vectors, item_weights) + item_bias)
         news_vectors.append(news_hop_vectors.reshape(self.batch_size, -1, self.dim))
-        news_neighbors = F.embedding(news[0][:, 0], self.news_user)
+        news_neighbors = F.embedding(news[0][:, 0], news_user)
         news.append(news_neighbors)
 
         user_hop_vectors = F.embedding(user[0], self.user_emb_matrix).reshape(-1, self.user_dim)
         user_hop_vectors = F.relu(torch.matmul(user_hop_vectors, user_weights) + user_bias)
         user_vectors.append(user_hop_vectors.reshape(self.batch_size, -1, self.dim))
-        user_neighbors = F.embedding(user[0][:, 0], self.user_news)
+        user_neighbors = F.embedding(user[0][:, 0], user_news)
         user.append(user_neighbors)
 
         if self.n_iter >= 1:
