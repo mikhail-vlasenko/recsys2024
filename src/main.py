@@ -6,9 +6,9 @@ import time
 
 import torch
 
-from data_loader import load_new_data
+from src.data_loader import load_new_data
 from src.model import Model
-from train import train_model
+from src.train import train_model
 import os
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '0'
 os.environ["CUDA_VISIBLE_DEVICES"] = "1"
