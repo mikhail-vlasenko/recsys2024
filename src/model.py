@@ -57,6 +57,16 @@ class Model(nn.Module):
         self.conv_layers = nn.ModuleDict()
         self.build_model()
 
+        #add learned parameter matrices (for embeddings mostely I think)
+        self.user_indices = nn.Parameter(torch.zeros(self.batch_size, dtype=torch.float64), requires_grad=True)
+        self.news_indices = nn.Parameter(torch.zeros(self.batch_size, dtype=torch.float64), requires_grad=True)
+        self.labels = nn.Parameter(torch.zeros(self.batch_size, dtype=torch.float64), requires_grad=True)
+        self.user_news = nn.Parameter(torch.zeros((self.n_user, self.news_neighbor), dtype=torch.float64), requires_grad=True)
+        self.news_user = nn.Parameter(torch.zeros((self.n_news, self.user_neighbor), dtype=torch.float64), requires_grad=True)
+
+
+
+
     def build_model(self):
         # self.user_emb_matrix = F.normalize(self.user_emb_matrix, dim=-1)
         # self.word_emb_matrix = F.normalize(self.word_emb_matrix, dim=-1)
