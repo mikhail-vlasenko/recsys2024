@@ -3,7 +3,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 import numpy as np
 from sklearn.metrics import f1_score, roc_auc_score
-from aggregators import SumAggregator, ConcatAggregator, NeighborAggregator, RoutingLayer
+from src.aggregators import SumAggregator, ConcatAggregator, NeighborAggregator, RoutingLayer
 
 
 class Model(nn.Module):
