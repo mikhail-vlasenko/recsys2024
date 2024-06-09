@@ -61,8 +61,8 @@ class Model(nn.Module):
         # self.user_emb_matrix = F.normalize(self.user_emb_matrix, dim=-1)
         # self.word_emb_matrix = F.normalize(self.word_emb_matrix, dim=-1)
 
-        self.conv_layers['item'] = nn.Conv2d(1, 8, kernel_size=(40, 20), stride=(1, 2))
-        self.conv_layers['title'] = nn.Conv2d(1, 8, kernel_size=(2, 20))
+        self.conv_layers['item'] = nn.Conv2d(1, 8, kernel_size=(40, 20), stride=(2, 2)) # you had this as stride=(1,2) before idk why
+        self.conv_layers['title'] = nn.Conv2d(1, 8, kernel_size=(2, 20), stride=(2,2))
 
         self.pool_item = nn.MaxPool2d(kernel_size=(3, 2), stride=(2, 2))
         self.pool_title = nn.MaxPool2d(kernel_size=(2, 1), stride=(1, 2))
@@ -274,6 +274,7 @@ class Model(nn.Module):
         item_group_embed = torch.cat((item_embed, group_embed), 2).reshape(-1, 80, 50).unsqueeze(-1)
 
         # in tf1 conv input is NHWC, not NCHW
+        print(item_group_embed.shape)
         item_group_embed = item_group_embed.permute(0, 3, 1, 2)
         conv_item = self.conv_layers['item'](item_group_embed)
         h_item = F.relu(conv_item)
@@ -292,7 +293,12 @@ class Model(nn.Module):
         pool_title = pooled_title.reshape(self.batch_size, -1, self.input_size_title)
 
         pooled = torch.cat((pool_item, pool_title), -1)
+        pooled = pooled.reshape(self.batch_size, -1)
+
+
+        #we need to flatten pooled and add a nonlinearity around the ouput. Relu in their case. 
         pool = self.dense(pooled)
+        pool = F.relu(pool)
 
         return pool
 
