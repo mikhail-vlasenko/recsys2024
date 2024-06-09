@@ -67,7 +67,10 @@ class Model(nn.Module):
         self.pool_item = nn.MaxPool2d(kernel_size=(3, 2), stride=(2, 2))
         self.pool_title = nn.MaxPool2d(kernel_size=(2, 1), stride=(1, 2))
 
-        self.dense = nn.Linear(self.input_size_item + self.input_size_title, self.cnn_out_size)
+        self.dense1 = nn.Linear(self.input_size_item + self.input_size_title, self.cnn_out_size)
+        scale_factor = 10
+        self.dense2 = nn.Linear(self.dense1.in_features * scale_factor, self.cnn_out_size)
+        self.dense3 = nn.Linear(self.dense2.in_features * scale_factor, self.cnn_out_size)
 
         self.optimizer = torch.optim.Adam(self.parameters(), lr=self.lr)
 
@@ -176,38 +179,7 @@ class Model(nn.Module):
             user_vectors.append(user_hop_vectors)
             user.append(user_neighbors)
 
-        if self.n_iter >= 3:
-            j = 0
-            while j < news[3].shape[1]:
-                if j == 0:
-                    news_hop_vectors = F.embedding(news[3][:,
-                    ], self.user_emb_matrix).reshape(-1, self.user_dim)
-                    news_hop_vectors = F.relu(torch.matmul(news_hop_vectors, user_weights) + user_bias)
-                    news_hop_vectors = news_hop_vectors.reshape(self.batch_size, -1, self.dim)
-                    j += u
-                else:
-                    t = F.embedding(news[3][:, j
-                    + u], self.user_emb_matrix).reshape(-1, self.user_dim)
-                    t = F.relu(torch.matmul(t, user_weights) + user_bias)
-                    t = t.reshape(self.batch_size, -1, self.dim)
-                    news_hop_vectors = torch.cat([news_hop_vectors, t], dim=1)
-                    j += u
-            news_vectors.append(news_hop_vectors)
-
-            i = 0
-            while i < user[3].shape[1]:
-                if i == 0:
-                    user_hop_vectors = self.convolution(user[3][:, :n]).reshape(-1, self.cnn_out_size)
-                    user_hop_vectors = torch.matmul(user_hop_vectors, item_weights) + item_bias
-                    user_hop_vectors = user_hop_vectors.reshape(self.batch_size, -1, self.dim)
-                    i += n
-                else:
-                    t = self.convolution(user[3][:, i:i + n]).reshape(-1, self.cnn_out_size)
-                    t = torch.matmul(t, user_weights) + user_bias
-                    t = t.reshape(self.batch_size, -1, self.dim)
-                    user_hop_vectors = torch.cat([user_hop_vectors, t], dim=1)
-                    i += n
-            user_vectors.append(user_hop_vectors)
+        # n_iter is always 2
         return news_vectors, user_vectors
 
     def aggregate(self, news_vectors, user_vectors):
@@ -295,9 +267,15 @@ class Model(nn.Module):
         pooled = torch.cat((pool_item, pool_title), -1)
         pooled = pooled.reshape(self.batch_size, -1)
 
-
-        #we need to flatten pooled and add a nonlinearity around the ouput. Relu in their case. 
-        pool = self.dense(pooled)
+        # convolution gets called with differnet input sizes so we actually need 3 dense layers and need to choose the right one
+        # the original code makes 3 layers implicitly because its tensorflow
+        if pooled.shape[1] == self.dense1.in_features:
+            pool = self.dense1(pooled)
+        elif pooled.shape[1] == self.dense2.in_features:
+            pool = self.dense2(pooled)
+        else:
+            pool = self.dense3(pooled)
+        # we need to flatten pooled and add a nonlinearity around the output. Relu in their case.
         pool = F.relu(pool)
 
         return pool
