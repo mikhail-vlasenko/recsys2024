@@ -10,7 +10,7 @@ from torch.utils.data import DataLoader, TensorDataset
 from scipy import sparse
 from collections import defaultdict
 
-from src.data_loader import train_random_neighbor, test_random_neighbor
+from src.data.data_loader import train_random_neighbor, test_random_neighbor
 
 
 def train_model(args, model, train_data, eval_data, test_data, train_user_news, train_news_user, test_user_news,

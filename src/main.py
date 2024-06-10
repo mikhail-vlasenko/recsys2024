@@ -6,8 +6,8 @@ import time
 
 import torch
 
-from src.data_loader import load_new_data
-from src.model import Model
+from src.data.data_loader import load_new_data
+from src.model.components.model import Model
 from src.train import train_model
 import os
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '0'
