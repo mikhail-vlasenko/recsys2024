@@ -7,7 +7,7 @@ from src.model.components.model import Model as Net
 import logging
 
 
-class Wang2022LightningModule(LightningModule):
+class OriginalModule(LightningModule):
     def __init__(
         self,
         net: torch.nn.Module,
