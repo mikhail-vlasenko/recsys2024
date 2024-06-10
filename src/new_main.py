@@ -11,7 +11,7 @@ from lightning.pytorch.callbacks import (
     DeviceStatsMonitor,
 )
 from lightning.pytorch.loggers import WandbLogger
-from src.model.original_lightning_module import OriginalModel
+from src.model.original_lightning_module import OriginalModule
 from src.components.model import Model
 
 def main():
@@ -26,7 +26,7 @@ def main():
     news_title, news_entity, news_group, train_user_news, train_news_user = datamodule.get_data()
     net = Model(args, torch.tensor(news_title), torch.tensor(news_entity), torch.tensor(news_group), len(train_user_news), len(news_title))
 
-    module = OriginalModel(net, torch.optim.Adam, torch.optim.lr_scheduler.StepLR, compile=True)
+    module = OriginalModule(net, torch.optim.Adam, torch.optim.lr_scheduler.StepLR, compile=True)
 
     checkpoint_filename = f"{args.ebnerd_variant}-original-model"
     checkpoint_callback = ModelCheckpoint(
