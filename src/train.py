@@ -7,8 +7,11 @@ import torch
 from sklearn.metrics import roc_auc_score, f1_score
 from torch import nn
 from torch.utils.data import DataLoader, TensorDataset
+import torch.nn.functional as F
 from scipy import sparse
 from collections import defaultdict
+
+from tqdm import tqdm
 
 from src.data.data_loader import train_random_neighbor, test_random_neighbor
 
@@ -38,28 +41,36 @@ def train_model(args, model, train_data, eval_data, test_data, train_user_news, 
     # )
     # eval_loader = DataLoader(eval_dataset, batch_size=args.batch_size, shuffle=False)
 
-    # criterion = nn.BCEWithLogitsLoss()
-    # optimizer = torch.optim.Adam(model.parameters(), lr=args.lr)
+    criterion = F.binary_cross_entropy_with_logits
+    optimizer = torch.optim.Adam(model.parameters(), lr=args.lr)
 
     for epoch in range(args.n_epochs):
         model.train()
         total_loss = 0
-        for user_indices, news_indices, labels in train_loader:
-            train_user_news, train_news_user = train_random_neighbor(args, train_user_news, train_news_user,
+        for user_indices, news_indices, labels in tqdm(train_loader):
+            user_news, news_user = train_random_neighbor(args, train_user_news, train_news_user,
                                                                      len(news_title))
 
             user_indices, news_indices, labels = user_indices.to(device), news_indices.to(device), labels.to(device)
-            train_user_news, train_news_user = torch.tensor(train_user_news, dtype=torch.long).to(device), torch.tensor(
-                train_news_user, dtype=torch.long).to(device)
+            user_news, news_user = torch.tensor(user_news, dtype=torch.long).to(device), torch.tensor(
+                news_user, dtype=torch.long).to(device)
 
-            # optimizer.zero_grad()
-            loss, scores_normalized, predict_label = model(
-                user_indices, news_indices, train_user_news, train_news_user, labels
+            optimizer.zero_grad()
+            scores, scores_normalized, predict_label, user_embeddings, news_embeddings = model(
+                user_indices, news_indices, user_news, news_user
             )
-            # loss.backward()
-            # optimizer.step()
+
+            total_loss = criterion(scores, labels)
+
+            # i feel like this is a bad way to do l2 regularization
+            l2_loss = sum(torch.norm(param) for param in model.parameters())
+            infer_loss, ret_w = model.infer_loss(user_embeddings, news_embeddings)
+
+            loss = (1 - args.balance) * total_loss + args.balance * infer_loss + args.l2_weight * l2_loss
+
+            loss.backward()
+            optimizer.step()
             total_loss += loss.item()
-            print("iteration done")
 
         print(f"Epoch {epoch + 1}/{args.n_epochs}, Loss: {total_loss / len(train_loader)}")
 

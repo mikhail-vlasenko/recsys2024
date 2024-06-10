@@ -23,7 +23,6 @@ class Model(nn.Module):
         self.user_neighbor = args.user_neighbor
         self.entity_neighbor = args.entity_neighbor
         self.n_iter = args.n_iter
-        self.l2_weight = args.l2_weight
         self.cnn_out_size = args.cnn_out_size
 
         self.news_entity = news_entity
@@ -35,7 +34,6 @@ class Model(nn.Module):
         self.nhidden = args.nhidden
         self.dim = self.ncaps * self.nhidden
         self.routit = args.routit
-        self.balance = args.balance
 
         self.n_user = n_user
         self.n_news = n_news
@@ -69,9 +67,7 @@ class Model(nn.Module):
 
         self.dense = nn.Linear(self.input_size_item + self.input_size_title, self.cnn_out_size)
 
-        self.optimizer = torch.optim.Adam(self.parameters(), lr=self.lr)
-
-    def forward(self, user_indices, news_indices, user_news, news_user, labels):
+    def forward(self, user_indices, news_indices, user_news, news_user):
         newsvec, uservec = self.get_neighbors(news_indices, user_indices, user_news, news_user)
         news_embeddings, user_embeddings, aggregators = self.aggregate(newsvec, uservec)
 
@@ -79,18 +75,7 @@ class Model(nn.Module):
         scores_normalized = torch.sigmoid(scores)
         predict_label = (scores > 0.5).int()
 
-        total_loss = F.binary_cross_entropy_with_logits(scores, labels)
-
-        l2_loss = sum(torch.norm(param) for param in self.parameters())
-        infer_loss, ret_w = self.infer_loss(user_embeddings, news_embeddings)
-
-        loss = (1 - self.balance) * total_loss + self.balance * infer_loss + self.l2_weight * l2_loss
-
-        self.optimizer.zero_grad()
-        loss.backward()
-        self.optimizer.step()
-
-        return loss, scores_normalized, predict_label
+        return scores, scores_normalized, predict_label, user_embeddings, news_embeddings
 
     def simple_dot_net(self, x, y):
         caps = self.ncaps - (self.n_iter - 1) * self.dcaps
@@ -105,6 +90,7 @@ class Model(nn.Module):
 
     def infer_loss(self, x, y):
         caps = self.ncaps - (self.n_iter - 1) * self.dcaps
+        # no way these params should be initialized here
         ret_uw = nn.Parameter(torch.randn(self.nhidden, caps) * 0.1)
         ret_ub = nn.Parameter(torch.zeros(caps))
 
@@ -242,7 +228,6 @@ class Model(nn.Module):
         item_group_embed = torch.cat((item_embed, group_embed), 2).reshape(-1, 80, 50).unsqueeze(-1)
 
         # in tf1 conv input is NHWC, not NCHW
-        print(item_group_embed.shape)
         item_group_embed = item_group_embed.permute(0, 3, 1, 2)
         conv_item = self.conv_layers['item'](item_group_embed)
         h_item = F.relu(conv_item)
