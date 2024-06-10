@@ -12,7 +12,7 @@ from lightning.pytorch.callbacks import (
 )
 from lightning.pytorch.loggers import WandbLogger
 from src.model.original_lightning_module import OriginalModule
-from src.components.model import Model
+from src.model.components.model import Model
 
 def main():
     args = get_training_args()
