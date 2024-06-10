@@ -51,9 +51,9 @@ class Model(nn.Module):
         self.filter_shape = [2, 8, 1, 4]
         self.cat_size = 7 * 30 * 4
 
-        self.Routing = RoutingLayer
+        routing_layers = 1
+        self.router = RoutingLayer(routing_layers, self.ncaps, self.nhidden, self.batch_size, args.dropout_rate, None)
 
-        self.dropout_rate = nn.Dropout(p=args.dropout_rate)
         self.conv_layers = nn.ModuleDict()
         self.build_model()
 
@@ -67,10 +67,7 @@ class Model(nn.Module):
         self.pool_item = nn.MaxPool2d(kernel_size=(3, 2), stride=(2, 2))
         self.pool_title = nn.MaxPool2d(kernel_size=(2, 1), stride=(1, 2))
 
-        self.dense1 = nn.Linear(self.input_size_item + self.input_size_title, self.cnn_out_size)
-        # todo: where do 10 and 30 come from?
-        self.dense2 = nn.Linear(self.dense1.in_features * 10, self.cnn_out_size)
-        self.dense3 = nn.Linear(self.dense2.in_features * 30, self.cnn_out_size)
+        self.dense = nn.Linear(self.input_size_item + self.input_size_title, self.cnn_out_size)
 
         self.optimizer = torch.optim.Adam(self.parameters(), lr=self.lr)
 
@@ -190,9 +187,8 @@ class Model(nn.Module):
 
         news = []
         user = []
-        for i in range(self.n_iter):
-            conv = self.Routing(i, out_caps, self.nhidden, self.batch_size, self.dropout_rate, inp_caps)
 
+        for i in range(self.n_iter):
             conv_ls.append(conv)
 
             news_vectors_next_iter = []
@@ -214,12 +210,12 @@ class Model(nn.Module):
                         news_shape = (self.batch_size, -1, self.news_neighbor, inp_caps * self.nhidden)
                         user_shape = (self.batch_size, -1, self.user_neighbor, inp_caps * self.nhidden)
 
-                news_vector = conv.rout(self_vectors=news_vectors[hop],
-                                        neighbor_vectors=news_vectors[hop + 1].reshape(*news_shape),
-                                        max_iter=self.routit)
-                user_vector = conv.rout(self_vectors=user_vectors[hop],
-                                        neighbor_vectors=user_vectors[hop + 1].reshape(*user_shape),
-                                        max_iter=self.routit)
+                news_vector = self.router(self_vectors=news_vectors[hop],
+                                          neighbor_vectors=news_vectors[hop + 1].reshape(*news_shape),
+                                          max_iter=self.routit)
+                user_vector = self.router(self_vectors=user_vectors[hop],
+                                          neighbor_vectors=user_vectors[hop + 1].reshape(*user_shape),
+                                          max_iter=self.routit)
 
                 news_vectors_next_iter.append(news_vector)
                 user_vectors_next_iter.append(user_vector)
@@ -265,16 +261,8 @@ class Model(nn.Module):
         pool_title = pooled_title.reshape(self.batch_size, -1, self.input_size_title)
 
         pooled = torch.cat((pool_item, pool_title), -1)
-        pooled = pooled.reshape(self.batch_size, -1)
 
-        # convolution gets called with differnet input sizes so we actually need 3 dense layers and need to choose the right one
-        # the original code makes 3 layers implicitly because its tensorflow
-        if pooled.shape[1] == self.dense1.in_features:
-            pool = self.dense1(pooled)
-        elif pooled.shape[1] == self.dense2.in_features:
-            pool = self.dense2(pooled)
-        else:
-            pool = self.dense3(pooled)
+        pool = self.dense(pooled.reshape((-1, self.dense.in_features)))
         # we need to flatten pooled and add a nonlinearity around the output. Relu in their case.
         pool = F.relu(pool)
 
