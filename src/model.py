@@ -68,14 +68,14 @@ class Model(nn.Module):
         self.pool_title = nn.MaxPool2d(kernel_size=(2, 1), stride=(1, 2))
 
         self.dense1 = nn.Linear(self.input_size_item + self.input_size_title, self.cnn_out_size)
-        scale_factor = 10
-        self.dense2 = nn.Linear(self.dense1.in_features * scale_factor, self.cnn_out_size)
-        self.dense3 = nn.Linear(self.dense2.in_features * scale_factor, self.cnn_out_size)
+        # todo: where do 10 and 30 come from?
+        self.dense2 = nn.Linear(self.dense1.in_features * 10, self.cnn_out_size)
+        self.dense3 = nn.Linear(self.dense2.in_features * 30, self.cnn_out_size)
 
         self.optimizer = torch.optim.Adam(self.parameters(), lr=self.lr)
 
     def forward(self, user_indices, news_indices, user_news, news_user, labels):
-        newsvec, uservec = self.get_neighbors(news_indices, user_indices, news_user, user_news)
+        newsvec, uservec = self.get_neighbors(news_indices, user_indices, user_news, news_user)
         news_embeddings, user_embeddings, aggregators = self.aggregate(newsvec, uservec)
 
         scores = torch.squeeze(self.simple_dot_net(user_embeddings, news_embeddings))
@@ -122,7 +122,7 @@ class Model(nn.Module):
 
         return loss, ret_uw
 
-    def get_neighbors(self, news_seeds, user_seeds, news_user, user_news):
+    def get_neighbors(self, news_seeds, user_seeds, user_news, news_user):
         news_seeds = news_seeds.unsqueeze(1)
         user_seeds = user_seeds.unsqueeze(1)
         news = [news_seeds]
@@ -153,14 +153,14 @@ class Model(nn.Module):
             news_hop_vectors = F.embedding(news[1][:, :u], self.user_emb_matrix).reshape(-1, self.user_dim)
             news_hop_vectors = F.relu(torch.matmul(news_hop_vectors, user_weights) + user_bias)
             news_hop_vectors = news_hop_vectors.reshape(self.batch_size, -1, self.dim)
-            news_neighbors = news[1][:, :u].reshape(self.batch_size, -1)
+            news_neighbors = user_news[news[1][:, :u]].view(self.batch_size, -1)
             news_vectors.append(news_hop_vectors)
             news.append(news_neighbors)
 
             user_hop_vectors = self.convolution(user[1]).reshape(-1, self.cnn_out_size)
             user_hop_vectors = F.relu(torch.matmul(user_hop_vectors, item_weights) + item_bias)
             user_hop_vectors = user_hop_vectors.reshape(self.batch_size, -1, self.dim)
-            user_neighbors = user[1][:, :n].reshape(self.batch_size, -1)
+            user_neighbors = news_user[user[1][:, :n]].view(self.batch_size, -1)
             user_vectors.append(user_hop_vectors)
             user.append(user_neighbors)
 
@@ -168,14 +168,14 @@ class Model(nn.Module):
             news_hop_vectors = self.convolution(news[2]).reshape(-1, self.cnn_out_size)
             news_hop_vectors = F.relu(torch.matmul(news_hop_vectors, item_weights) + item_bias)
             news_hop_vectors = news_hop_vectors.reshape(self.batch_size, -1, self.dim)
-            news_neighbors = news[2].reshape(self.batch_size, -1)
+            news_neighbors = news_user[news[2]].view(self.batch_size, -1)
             news_vectors.append(news_hop_vectors)
             news.append(news_neighbors)
 
             user_hop_vectors = F.embedding(user[2], self.user_emb_matrix).reshape(-1, self.user_dim)
             user_hop_vectors = F.relu(torch.matmul(user_hop_vectors, user_weights) + user_bias)
             user_hop_vectors = user_hop_vectors.reshape(self.batch_size, -1, self.dim)
-            user_neighbors = user[2].reshape(self.batch_size, -1)
+            user_neighbors = user_news[user[2]].view(self.batch_size, -1)
             user_vectors.append(user_hop_vectors)
             user.append(user_neighbors)
 
