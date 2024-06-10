@@ -40,7 +40,7 @@ def main():
         entity="inverse-rl", project="RecSys", name=checkpoint_filename
     )
 
-    wandb_logger.watch(model, log="all")
+    wandb_logger.watch(module, log="all")
 
     callbacks = [checkpoint_callback]
 
