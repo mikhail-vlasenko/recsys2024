@@ -1,135 +1,126 @@
-import tensorflow as tf
-import os
 import numpy as np
-import pandas as pd
-from model import Model
-from data_loader import train_random_neighbor, test_random_neighbor
+import json
+import random
+import time
+import datetime
+import torch
+from sklearn.metrics import roc_auc_score, f1_score
+from torch import nn
+from torch.utils.data import DataLoader, TensorDataset, Subset
+import torch.nn.functional as F
+from scipy import sparse
+from collections import defaultdict
+
+from tqdm import tqdm
+
+from src.data.data_loader import random_neighbor, optimized_random_neighbor
+
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 
-def train(args, data, show_loss):
-    train_data, eval_data, test_data = data[0], data[1], data[2]
-    train_user_news, train_news_user, test_user_news, test_news_user = data[3], data[4], data[5], data[6]
-    news_title, news_entity, news_group = data[7], data[8], data[9]
+def train_model(args, model, train_data, eval_data, test_data, train_user_news, train_news_user, test_user_news,
+                test_news_user, news_title, news_entity, news_group):
+    model.to(device)
 
-    checkpt_file = os.path.join(args.save_path, str(args.balance)+'-'+str(args.version)+'-'+'model.ckpt')
+    train_data = np.array(train_data[:, [0, 1, 3]], dtype=np.int32)
 
-    print(len(train_user_news))
+    train_dataset = TensorDataset(
+        torch.tensor(train_data[:, 0], dtype=torch.long),
+        torch.tensor(train_data[:, 1], dtype=torch.long),
+        torch.tensor(train_data[:, 2], dtype=torch.float32),
+        # torch.tensor(train_user_news, dtype=torch.long),
+        # torch.tensor(train_news_user, dtype=torch.long)
+    )
+    # train_dataset = Subset(train_dataset, indices=range(len(train_dataset) // 10))
 
-    model = Model(args, news_title, news_entity, news_group, len(train_user_news), len(news_title))
+    train_loader = DataLoader(train_dataset, batch_size=args.batch_size, shuffle=True)
 
-    gpu_options = tf.GPUOptions()
-    config = tf.ConfigProto(gpu_options=gpu_options)
+    if args.optimized_subsampling:
+        # dict to list
+        max_news_id = len(news_title)
+        temp_train_news_user = []
+        for i in range(max_news_id):
+            if i in train_news_user:
+                temp_train_news_user.append(train_news_user[i])
+            else:
+                temp_train_news_user.append([])
+        train_news_user = temp_train_news_user
+        user_lengths = torch.tensor([len(train_user_news[i]) for i in range(len(train_user_news))]).unsqueeze(1)#.to(device)
+        news_lengths = torch.tensor([len(train_news_user[i]) for i in range(len(train_news_user))]).unsqueeze(1)#.to(device)
 
-    config.gpu_options.allow_growth = True
-    with tf.Session(config=config) as sess:
-        sess.run(tf.global_variables_initializer())
-        if not os.path.exists(args.save_path):
-            os.makedirs(args.save_path)
-        # saver = tf.train.Saver(write_version=tf.train.SaverDef.V2)
-        saver = tf.train.Saver()
-        file = open("local-" + "balance" + str(args.balance) + ".txt", "a")
-        global_step = 0
-        for step in range(args.n_epochs):
-            np.random.shuffle(train_data)
-            start = 0
-            max_f1 = 0
-            curr_step = 0
-            patience = 5
-            vlss_mn=np.inf
-            user_news, news_user = train_random_neighbor(args, train_user_news, train_news_user, len(news_title))
-            print(len(user_news))
+        def list_of_lists_to_torch(lst, pad_value, max_len, device):
+            tensors = []
+            for l in tqdm(
+                    lst,
+                    desc=f"Converting to torch (needs {max_len * len(lst) * 4 / 1024 / 1024:.2f} MB on {device})"
+            ):
+                pad = (0, max_len - len(l))  # pad 0 on the left and to max_len on the right
+                tensors.append(F.pad(torch.tensor(l, dtype=torch.int32, device=device), pad, value=pad_value))
+            return torch.stack(tensors)
 
-            # skip the last incomplete minibatch if its size < batch size
+        dense_matrix_device = torch.device("cpu")
+        train_user_news = list_of_lists_to_torch(train_user_news, 0, user_lengths.max().item(), dense_matrix_device)
+        train_news_user = list_of_lists_to_torch(train_news_user, 0, news_lengths.max().item(), dense_matrix_device)
 
-            while start + args.batch_size <= train_data.shape[0]:
+    # eval_dataset = TensorDataset(
+    #     torch.tensor(eval_data[:, 0], dtype=torch.long),
+    #     torch.tensor(eval_data[:, 1], dtype=torch.long),
+    #     torch.tensor(eval_data[:, 2], dtype=torch.float32),
+    #     torch.tensor(test_user_news, dtype=torch.long),
+    #     torch.tensor(test_news_user, dtype=torch.long)
+    # )
+    # eval_loader = DataLoader(eval_dataset, batch_size=args.batch_size, shuffle=False)
 
-                global_step += 1
+    criterion = F.binary_cross_entropy_with_logits
+    optimizer = torch.optim.Adam(model.parameters(), lr=args.lr, weight_decay=args.l2_weight)
 
-                _, loss, n, u, train_auc, train_f1 = model.train(sess, get_feed_dict(model, train_data, start,
-                                                                                start + args.batch_size,
-                                                                                0.5, user_news, news_user))
-                start += args.batch_size
+    for epoch in range(args.n_epochs):
+        model.train()
+        total_loss = 0
+        for user_indices, news_indices, labels in tqdm(train_loader):
+            if args.optimized_subsampling:
+                user_news, news_user = optimized_random_neighbor(args, train_user_news, train_news_user,
+                                                                 user_lengths, news_lengths)
+            else:
+                user_news, news_user = random_neighbor(args, train_user_news, train_news_user, len(news_title))
 
-                if start % (128*100) == 0:
-                    sam_test_user_news, sam_test_news_user = test_random_neighbor(args, test_user_news, test_news_user, len(news_title))
-                    print(len(sam_test_news_user))
+            user_indices, news_indices, labels = user_indices.to(device), news_indices.to(device), labels.to(device)
+            user_news, news_user = torch.tensor(user_news, dtype=torch.long).to(device), torch.tensor(
+                news_user, dtype=torch.long).to(device)
 
-                    eval_auc, eval_f1, pre = ctr_eval(sess, model, eval_data, args.batch_size, args,
-                                                                                  sam_test_user_news,
-                                                                                  sam_test_news_user)
-                    print("----------\n\n")
-                    print('train auc: %.4f  f1: %.4f    eval auc: %.4f  f1: %.4f'
-                          % (train_auc, train_f1, eval_auc, eval_f1))
+            optimizer.zero_grad()
+            scores, scores_normalized, predict_label, user_embeddings, news_embeddings = model(
+                user_indices, news_indices, user_news, news_user
+            )
 
-                # if show_loss:
-                    print(start, loss)
+            total_loss = criterion(scores, labels)
+            infer_loss = model.infer_loss(user_embeddings, news_embeddings)
+            loss = (1 - args.balance) * total_loss + args.balance * infer_loss
 
-                    file.write(str(eval_auc)+" " +str(eval_f1) + "\n")
-                    file.write(str(start) + " " + str(loss) + "\n")
-                    if eval_f1 >= max_f1:
-                        saver.save(sess, checkpt_file)
-                        max_f1 = eval_f1
+            loss.backward()
+            optimizer.step()
+            total_loss += loss.item()
 
-                        curr_step = 0
+        print(f"Epoch {epoch + 1}/{args.n_epochs}, Loss: {total_loss / len(train_loader)}")
 
-                    else:
-                        curr_step += 1
-                        if curr_step == patience:
-                            print('Early stop valid max f1: ', max_f1)
-                            break
-            saver.restore(sess, checkpt_file)
-            # CTR evaluation
-            max_test_user_news, max_test_news_user = test_random_neighbor(args, test_user_news, test_news_user, len(news_title))
-            train_auc, train_f1, pre = ctr_eval(sess, model, train_data[:2048], args.batch_size, args, max_test_user_news, max_test_news_user)
+        # model.eval()
+        # with torch.no_grad():
+        #     eval_loss = 0
+        #     all_labels = []
+        #     all_scores = []
+        #     for user_indices, news_indices, labels, user_news, news_user in eval_loader:
+        #         user_indices, news_indices, labels = user_indices.to(device), news_indices.to(device), labels.to(device)
+        #         user_news, news_user = user_news.to(device), news_user.to(device)
+        #
+        #         loss, scores_normalized, predict_label = model(user_indices, news_indices, labels, user_news, news_user)
+        #         eval_loss += loss.item()
+        #         all_labels.extend(labels.cpu().numpy())
+        #         all_scores.extend(scores_normalized.cpu().numpy())
+        #
+        #     eval_auc = roc_auc_score(all_labels, all_scores)
+        #     eval_f1 = f1_score(all_labels, [1 if score >= 0.5 else 0 for score in all_scores])
+        #
+        # print(
+        #     f"Epoch {epoch + 1}/{args.n_epochs}, Eval Loss: {eval_loss / len(eval_loader)}, Eval AUC: {eval_auc}, Eval F1: {eval_f1}")
 
-            eval_auc, eval_f1, pre = ctr_eval(sess, model, eval_data, args.batch_size, args, max_test_user_news, max_test_news_user)
-            print('epoch %d    train auc: %.4f  f1: %.4f    eval auc: %.4f  f1: %.4f'
-                  % (step, train_auc, train_f1, eval_auc, eval_f1))
-            # print('epoch %d    eval auc: %.4f  f1: %.4f'
-            #       % (step, eval_auc, eval_f1,))
-
-            test_auc, test_f1, pred = ctr_eval(sess, model, test_data, args.batch_size, args, max_test_user_news, max_test_news_user)
-            with open('predict.txt', 'a') as f:
-                f.write(str(pred) + "\n")
-
-            print('test auc: %.4f  f1: %.4f'
-                  % (test_auc, test_f1))
-            file.write("\n-----------\n"+str(step) + "\n" + str(train_auc)+ " " + str(train_f1)+ " " + str(eval_auc)+ " "+str(eval_f1) + " " + str(test_auc)+ " " + str(test_f1) + "\n")
-        file.close()
-
-
-def get_feed_dict(model, data, start, end, dropout, user_news, news_user):
-    feed_dict = {model.user_indices: data[start:end, 0],
-                 model.news_indices: data[start:end, 1],
-                 model.dropout_rate: dropout,
-                 model.labels: data[start:end, 3],
-                 model.user_news: user_news,
-                 model.news_user: news_user}
-    return feed_dict
-
-
-def ctr_eval(sess, model, data, batch_size, args, input_user_news, input_news_user):
-    start = 0
-    auc_list = []
-    user_f1 = []
-    f1_list = []
-    pre_list = []
-    news_rep = []
-    user_rep = []
-    los_list = []
-
-    user_news, news_user = input_user_news, input_news_user
-    while start + batch_size <= data.shape[0]:
-
-        auc, f1, predict = model.eval(sess, get_feed_dict(model, data, start, start + batch_size, 0, user_news, news_user))
-        auc_list.append(auc)
-        f1_list.append(f1)
-        pre_list.append(predict)
-
-        start += batch_size
-        # print("!!!!")
-        # print(scores[:30],l[:30])
-        # with open('eval_re1.txt','a') as f:
-        #     f.write(str(scores)+"\n"+str(l)+'----')
-
-    return float(np.mean(auc_list)), float(np.mean(f1_list)), pre_list[0]
+    return model

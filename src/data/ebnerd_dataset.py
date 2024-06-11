@@ -24,6 +24,8 @@ from src.ebrec.utils._constants import (
     DEFAULT_LABELS_COL,
     DEFAULT_TITLE_COL,
     DEFAULT_USER_COL,
+    DEFAULT_NER_COL,
+    DEFAULT_ENTITIES_COL
 )
 
 from src.ebrec.utils._behaviors import (
@@ -44,12 +46,28 @@ from src.ebrec.models.newsrec.dataloader import NRMSDataLoader
 from src.ebrec.models.newsrec.model_config import hparams_nrms
 from src.ebrec.models.newsrec import NRMSModel
 
+from src.ebrec.utils._python import (
+    repeat_by_list_values_from_matrix,
+    create_lookup_objects,
+)
+
 class EbnerdDataset(Dataset):
 
     def __init__(self, root_dir, data_split, mode = "train", history_size = 30, fraction = 0.1):
         super().__init__()
 
-        self.df_behaviors, self.df_history = self.ebnerd_from_path(path=root_dir, history_size=history_size, mode=mode, data_split=data_split, fraction=fraction)
+        self.df_behaviors, self.df_history, articles = self.ebnerd_from_path(path=root_dir, history_size=history_size, mode=mode, data_split=data_split, fraction=fraction)
+
+        self.unknown_representation = "zeros"
+        self.article_df = articles
+
+        #preprocess the articles into embedding vectors
+        #self.articles, self.article_mapping = self.preprocess_articles(articles)
+
+        #something idk
+        self.lookup_article_index, self.lookup_article_matrix = create_lookup_objects(
+            self.article_mapping, unknown_representation=self.unknown_representation
+        )
 
     def __len__(self):
         return len(self.df_behaviors)
@@ -58,9 +76,76 @@ class EbnerdDataset(Dataset):
         """
         TODO: im really confused and idk if this is the best way to do things, but its something I can test atleast 
         """
-        row = self.df_behaviors.iloc[idx]
+        row = self.df_behaviors.row(idx)
        
         return row
+    
+    def get_n_users(self) -> int:
+        return len(self.df_behaviors[DEFAULT_USER_COL].unique())
+    
+    def get_word_ids(self, max_title_length) -> Tensor:
+        #intialize the tokenizer
+        TRANSFORMER_MODEL_NAME = "FacebookAI/xlm-roberta-base"
+        TEXT_COLUMNS_TO_USE = [DEFAULT_TITLE_COL, DEFAULT_ENTITIES_COL, DEFAULT_NER_COL]
+
+        transformer_tokenizer = AutoTokenizer.from_pretrained(TRANSFORMER_MODEL_NAME)
+
+        #encode the titles 
+        titles_list= list(self.article_df[DEFAULT_TITLE_COL])
+        encoding = transformer_tokenizer(titles_list, return_tensors='pt', padding='max_length', max_length=max_title_length, truncation=True)
+        title_word_ids = encoding['input_ids']
+
+        #encode the enities
+        entities_list = list(self.article_df[DEFAULT_ENTITIES_COL])
+        encoding = transformer_tokenizer(entities_list, return_tensors='pt', padding='max_length', max_length=max_title_length, truncation=True)
+        entities_word_ids = encoding['input_ids']
+
+        #encode the ner
+        ner_list = list(self.article_df[DEFAULT_NER_COL])
+        ner_dict = self.build_dictionary(ner_list)
+        ner_word_ids = self.tokenize_texts(ner_list, ner_dict, max_title_length)
+
+        return title_word_ids, entities_word_ids, ner_word_ids
+    
+    def build_dictionary(texts):
+        unique_words = set()
+        for text in texts:
+            unique_words.update(text)  # Assuming text is a list of words
+        word_dict = {'[PAD]': 0}  # Initialize with padding token
+        for word in unique_words:
+            if word not in word_dict:  # This check prevents overwriting existing tokens
+                word_dict[word] = len(word_dict)
+        return word_dict
+
+    def tokenize_texts(texts, word_dict, max_length):
+        return [
+            (tokens := [word_dict.get(word, word_dict['[PAD]']) for word in text])[:max_length] +
+            [word_dict['[PAD]']] * (max_length - len(tokens))
+            if text else [word_dict['[PAD]']] * max_length  # Handle empty lists with full padding
+            for text in texts
+        ]
+    
+    def preprocess_articles(self, df_articles: pl.DataFrame) -> pl.DataFrame:
+        TRANSFORMER_MODEL_NAME = "FacebookAI/xlm-roberta-base"
+        # this should be changed probably to be a parameter
+        TEXT_COLUMNS_TO_USE = [DEFAULT_TITLE_COL, DEFAULT_ENTITIES_COL, DEFAULT_NER_COL] 
+        MAX_TITLE_LENGTH = 30
+
+        # LOAD HUGGINGFACE:
+        transformer_model = AutoModel.from_pretrained(TRANSFORMER_MODEL_NAME)
+        transformer_tokenizer = AutoTokenizer.from_pretrained(TRANSFORMER_MODEL_NAME)
+
+        df_articles, cat_cal = concat_str_columns(df_articles, columns=TEXT_COLUMNS_TO_USE)
+        df_articles, token_col_title = convert_text2encoding_with_transformers(
+            df_articles, transformer_tokenizer, cat_cal, max_length=MAX_TITLE_LENGTH
+        )
+
+        # =>
+        article_mapping = create_article_id_to_value_mapping(
+            df=df_articles, value_col=token_col_title
+        )
+
+        return df_articles, article_mapping
 
     def ebnerd_from_path(self, path: Path, mode: str, data_split, history_size: int = 30, fraction = 0.1) -> pl.DataFrame:
         """
@@ -70,8 +155,9 @@ class EbnerdDataset(Dataset):
         print(f'processing {mode} data')
         if mode == "test":
             path = Path(path) / 'ebnerd_testset' / mode
-            return None, None
+            return None, None, None
         else:
+            article_path = Path(path) / data_split / "articles.parquet"
             path = Path(path) / data_split / mode
         
         df_history = (
@@ -114,8 +200,11 @@ class EbnerdDataset(Dataset):
                 .sample(fraction=fraction)
             )
 
+        #also load article data 
+        df_articles = pl.read_parquet(article_path)
 
-        return df_behaviors, df_history
+
+        return df_behaviors, df_history, df_articles
 
     @classmethod
     def download_and_extract(cls, root_dir: str, data_download_path: str, api_key: str):

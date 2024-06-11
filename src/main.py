@@ -1,12 +1,17 @@
 import argparse
+import pickle
+
 import numpy as np
 import time
-from data_loader import load_data, load_new_data
-from train import train
-import os
-os.environ['TF_CPP_MIN_LOG_LEVEL'] = '0'
-os.environ["CUDA_VISIBLE_DEVICES"] = "1"
 
+import torch
+
+from src.data.data_loader import load_new_data
+from src.model.components.model import Model
+from src.train import train_model
+import os
+
+# os.environ['CUDA_LAUNCH_BLOCKING'] = '1'
 
 
 parser = argparse.ArgumentParser()
@@ -15,7 +20,7 @@ parser.add_argument('--dataset', type=str, default='ten_week', help='which datas
 parser.add_argument('--title_len', type=int, default=10, help='the max length of title')
 parser.add_argument('--session_len', type=int, default=10, help='the max length of session')
 parser.add_argument('--aggregator', type=str, default='neighbor', help='which aggregator to use')
-parser.add_argument('--n_epochs', type=int, default=1, help='the number of epochs')
+parser.add_argument('--n_epochs', type=int, default=10, help='the number of epochs')
 parser.add_argument('--user_neighbor', type=int, default=30, help='the number of neighbors to be sampled')
 parser.add_argument('--news_neighbor', type=int, default=10, help='the number of neighbors to be sampled')
 parser.add_argument('--entity_neighbor', type=int, default=1, help='the number of neighbors to be sampled') #whats this one
@@ -41,16 +46,36 @@ parser.add_argument('--routit', type=int, default=7,
 parser.add_argument('--balance', type=float, default=0.004, help='learning rate')  #3e-4
 parser.add_argument('--version', type=int, default=0,
                         help='Different version under the same set')
+parser.add_argument('--dropout_rate', type=float, default=0.3, help='dropout rate')
+parser.add_argument('--optimized_subsampling', type=bool, default=True)
+
+
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 show_loss = True
 show_time = False
 
-#t = time()
-
 args = parser.parse_args()
-# data = load_data(args)
-data = load_new_data(args)
-train(args, data, show_loss)
 
-#if show_time:
-#    print('time used: %d s' % (time() - t))
+fast_load_path = 'data.pkl'
+
+if not os.path.exists(fast_load_path):
+    data_tuple = load_new_data(args)
+
+    with open(fast_load_path, 'wb') as f:
+        pickle.dump(data_tuple, f)
+
+with open(fast_load_path, 'rb') as f:
+    data_tuple = pickle.load(f)
+
+train_data, eval_data, test_data, train_user_news, train_news_user, test_user_news, test_news_user, news_title, news_entity, news_group = data_tuple
+
+#len(train_user_news) -> is n users  
+
+model = Model(
+    args,
+    torch.tensor(news_title).to(device), torch.tensor(news_entity).to(device), torch.tensor(news_group).to(device),
+    len(train_user_news), len(news_title)
+)
+
+trained_model = train_model(args, model, train_data, eval_data, test_data, train_user_news, train_news_user, test_user_news, test_news_user, news_title, news_entity, news_group)
