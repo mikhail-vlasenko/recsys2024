@@ -24,6 +24,8 @@ from src.ebrec.utils._constants import (
     DEFAULT_LABELS_COL,
     DEFAULT_TITLE_COL,
     DEFAULT_USER_COL,
+    DEFAULT_NER_COL,
+    DEFAULT_ENTITIES_COL
 )
 
 from src.ebrec.utils._behaviors import (
@@ -80,7 +82,7 @@ class EbnerdDataset(Dataset):
     def preprocess_articles(self, df_articles: pl.DataFrame) -> pl.DataFrame:
         TRANSFORMER_MODEL_NAME = "FacebookAI/xlm-roberta-base"
         # this should be changed probably to be a parameter
-        TEXT_COLUMNS_TO_USE = [DEFAULT_SUBTITLE_COL, DEFAULT_TITLE_COL] 
+        TEXT_COLUMNS_TO_USE = [DEFAULT_TITLE_COL, DEFAULT_ENTITIES_COL, DEFAULT_NER_COL] 
         MAX_TITLE_LENGTH = 30
 
         # LOAD HUGGINGFACE:
@@ -98,8 +100,6 @@ class EbnerdDataset(Dataset):
         )
 
         return df_articles, article_mapping
-
-
 
     def ebnerd_from_path(self, path: Path, mode: str, data_split, history_size: int = 30, fraction = 0.1) -> pl.DataFrame:
         """
