@@ -117,27 +117,27 @@ class Model(nn.Module):
         news_hop_vectors = self.convolution(news[0]).reshape(-1, self.cnn_out_size)
         news_hop_vectors = F.relu(self.item_transform(news_hop_vectors))
         news_vectors.append(news_hop_vectors.reshape(self.batch_size, -1, self.dim))
-        news_neighbors = F.embedding(news[0][:, 0], news_user)
+        news_neighbors = F.embedding(news[0], news_user)
         news.append(news_neighbors)
 
         user_hop_vectors = self.user_emb_matrix(user[0]).reshape(-1, self.user_dim)
         user_hop_vectors = F.relu(self.user_transform(user_hop_vectors))
         user_vectors.append(user_hop_vectors.reshape(self.batch_size, -1, self.dim))
-        user_neighbors = F.embedding(user[0][:, 0], user_news)
+        user_neighbors = F.embedding(user[0], user_news)
         user.append(user_neighbors)
 
         if self.n_iter >= 1:
             news_hop_vectors = self.user_emb_matrix(news[1][:, :u]).reshape(-1, self.user_dim)
             news_hop_vectors = F.relu(self.user_transform(news_hop_vectors))
             news_hop_vectors = news_hop_vectors.reshape(self.batch_size, -1, self.dim)
-            news_neighbors = user_news[news[1][:, :u]].view(self.batch_size, -1)
+            news_neighbors = user_news[news[1]].view(self.batch_size, -1)
             news_vectors.append(news_hop_vectors)
             news.append(news_neighbors)
 
             user_hop_vectors = self.convolution(user[1]).reshape(-1, self.cnn_out_size)
             user_hop_vectors = F.relu(self.item_transform(user_hop_vectors))
             user_hop_vectors = user_hop_vectors.reshape(self.batch_size, -1, self.dim)
-            user_neighbors = news_user[user[1][:, :n]].view(self.batch_size, -1)
+            user_neighbors = news_user[user[1]].view(self.batch_size, -1)
             user_vectors.append(user_hop_vectors)
             user.append(user_neighbors)
 

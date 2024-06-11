@@ -10,9 +10,8 @@ from src.data.data_loader import load_new_data
 from src.model.components.model import Model
 from src.train import train_model
 import os
-os.environ['TF_CPP_MIN_LOG_LEVEL'] = '0'
-os.environ["CUDA_VISIBLE_DEVICES"] = "1"
 
+# os.environ['CUDA_LAUNCH_BLOCKING'] = '1'
 
 
 parser = argparse.ArgumentParser()
@@ -21,7 +20,7 @@ parser.add_argument('--dataset', type=str, default='ten_week', help='which datas
 parser.add_argument('--title_len', type=int, default=10, help='the max length of title')
 parser.add_argument('--session_len', type=int, default=10, help='the max length of session')
 parser.add_argument('--aggregator', type=str, default='neighbor', help='which aggregator to use')
-parser.add_argument('--n_epochs', type=int, default=1, help='the number of epochs')
+parser.add_argument('--n_epochs', type=int, default=10, help='the number of epochs')
 parser.add_argument('--user_neighbor', type=int, default=30, help='the number of neighbors to be sampled')
 parser.add_argument('--news_neighbor', type=int, default=10, help='the number of neighbors to be sampled')
 parser.add_argument('--entity_neighbor', type=int, default=1, help='the number of neighbors to be sampled') #whats this one
@@ -48,6 +47,7 @@ parser.add_argument('--balance', type=float, default=0.004, help='learning rate'
 parser.add_argument('--version', type=int, default=0,
                         help='Different version under the same set')
 parser.add_argument('--dropout_rate', type=float, default=0.3, help='dropout rate')
+parser.add_argument('--optimized_subsampling', type=bool, default=True)
 
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
