@@ -24,6 +24,8 @@ from src.ebrec.utils._constants import (
     DEFAULT_LABELS_COL,
     DEFAULT_TITLE_COL,
     DEFAULT_USER_COL,
+    DEFAULT_NER_COL,
+    DEFAULT_ENTITIES_COL
 )
 
 from src.ebrec.utils._behaviors import (
@@ -57,9 +59,10 @@ class EbnerdDataset(Dataset):
         self.df_behaviors, self.df_history, articles = self.ebnerd_from_path(path=root_dir, history_size=history_size, mode=mode, data_split=data_split, fraction=fraction)
 
         self.unknown_representation = "zeros"
+        self.article_df = articles
 
         #preprocess the articles into embedding vectors
-        self.articles, self.article_mapping = self.preprocess_articles(articles)
+        #self.articles, self.article_mapping = self.preprocess_articles(articles)
 
         #something idk
         self.lookup_article_index, self.lookup_article_matrix = create_lookup_objects(
@@ -77,10 +80,55 @@ class EbnerdDataset(Dataset):
        
         return row
     
+    def get_n_users(self) -> int:
+        return len(self.df_behaviors[DEFAULT_USER_COL].unique())
+    
+    def get_word_ids(self, max_title_length) -> Tensor:
+        #intialize the tokenizer
+        TRANSFORMER_MODEL_NAME = "FacebookAI/xlm-roberta-base"
+        TEXT_COLUMNS_TO_USE = [DEFAULT_TITLE_COL, DEFAULT_ENTITIES_COL, DEFAULT_NER_COL]
+
+        transformer_tokenizer = AutoTokenizer.from_pretrained(TRANSFORMER_MODEL_NAME)
+
+        #encode the titles 
+        titles_list= list(self.article_df[DEFAULT_TITLE_COL])
+        encoding = transformer_tokenizer(titles_list, return_tensors='pt', padding='max_length', max_length=max_title_length, truncation=True)
+        title_word_ids = encoding['input_ids']
+
+        #encode the enities
+        entities_list = list(self.article_df[DEFAULT_ENTITIES_COL])
+        encoding = transformer_tokenizer(entities_list, return_tensors='pt', padding='max_length', max_length=max_title_length, truncation=True)
+        entities_word_ids = encoding['input_ids']
+
+        #encode the ner
+        ner_list = list(self.article_df[DEFAULT_NER_COL])
+        ner_dict = self.build_dictionary(ner_list)
+        ner_word_ids = self.tokenize_texts(ner_list, ner_dict, max_title_length)
+
+        return title_word_ids, entities_word_ids, ner_word_ids
+    
+    def build_dictionary(texts):
+        unique_words = set()
+        for text in texts:
+            unique_words.update(text)  # Assuming text is a list of words
+        word_dict = {'[PAD]': 0}  # Initialize with padding token
+        for word in unique_words:
+            if word not in word_dict:  # This check prevents overwriting existing tokens
+                word_dict[word] = len(word_dict)
+        return word_dict
+
+    def tokenize_texts(texts, word_dict, max_length):
+        return [
+            (tokens := [word_dict.get(word, word_dict['[PAD]']) for word in text])[:max_length] +
+            [word_dict['[PAD]']] * (max_length - len(tokens))
+            if text else [word_dict['[PAD]']] * max_length  # Handle empty lists with full padding
+            for text in texts
+        ]
+    
     def preprocess_articles(self, df_articles: pl.DataFrame) -> pl.DataFrame:
         TRANSFORMER_MODEL_NAME = "FacebookAI/xlm-roberta-base"
         # this should be changed probably to be a parameter
-        TEXT_COLUMNS_TO_USE = [DEFAULT_SUBTITLE_COL, DEFAULT_TITLE_COL] 
+        TEXT_COLUMNS_TO_USE = [DEFAULT_TITLE_COL, DEFAULT_ENTITIES_COL, DEFAULT_NER_COL] 
         MAX_TITLE_LENGTH = 30
 
         # LOAD HUGGINGFACE:
@@ -98,8 +146,6 @@ class EbnerdDataset(Dataset):
         )
 
         return df_articles, article_mapping
-
-
 
     def ebnerd_from_path(self, path: Path, mode: str, data_split, history_size: int = 30, fraction = 0.1) -> pl.DataFrame:
         """

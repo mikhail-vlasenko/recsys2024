@@ -70,6 +70,8 @@ with open(fast_load_path, 'rb') as f:
 
 train_data, eval_data, test_data, train_user_news, train_news_user, test_user_news, test_news_user, news_title, news_entity, news_group = data_tuple
 
+#len(train_user_news) -> is n users  
+
 model = Model(
     args,
     torch.tensor(news_title).to(device), torch.tensor(news_entity).to(device), torch.tensor(news_group).to(device),
