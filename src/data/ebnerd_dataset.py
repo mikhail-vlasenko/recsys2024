@@ -56,11 +56,12 @@ class EbnerdDataset(Dataset):
 
         self.df_behaviors, self.df_history, articles = self.ebnerd_from_path(path=root_dir, history_size=history_size, mode=mode, data_split=data_split, fraction=fraction)
 
+        self.unkown_representation = [0]
+
         #preprocess the articles into embedding vectors
         self.articles, self.article_mapping = self.preprocess_articles(articles)
 
         #something idk
-        self.unkown_representation = [0]
         self.lookup_article_index, self.lookup_article_matrix = create_lookup_objects(
             self.article_mapping, unknown_representation=self.unknown_representation
         )
