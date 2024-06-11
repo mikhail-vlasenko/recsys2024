@@ -109,7 +109,7 @@ class EbnerdDataset(Dataset):
         print(f'processing {mode} data')
         if mode == "test":
             path = Path(path) / 'ebnerd_testset' / mode
-            return None, None
+            return None, None, None
         else:
             article_path = Path(path) / data_split / "articles.parquet"
             path = Path(path) / data_split / mode
