@@ -44,7 +44,7 @@ from src.ebrec.models.newsrec.dataloader import NRMSDataLoader
 from src.ebrec.models.newsrec.model_config import hparams_nrms
 from src.ebrec.models.newsrec import NRMSModel
 
-from ebrec.utils._python import (
+from src.ebrec.utils._python import (
     repeat_by_list_values_from_matrix,
     create_lookup_objects,
 )
