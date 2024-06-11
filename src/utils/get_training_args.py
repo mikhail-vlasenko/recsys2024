@@ -11,7 +11,6 @@ def get_training_args():
         default=EbnerdVariants.get_default_variant(),
     )
 
-    parser.add_argument("--batch_size", type=int, default=128)
     parser.add_argument("--num_workers", type=int, default=2)
 
     #hugging face
@@ -29,6 +28,7 @@ def get_training_args():
     parser.add_argument('--user_dim', type=int, default=128, help='dimension of user and entity embeddings')
     parser.add_argument('--cnn_out_size', type=int, default=128, help='dimension of cnn output')
     parser.add_argument('--n_iter', type=int, default=2, help='number of iterations when computing entity representation')
+    parser.add_argument('--batch_size', type=int, default=128, help='batch size')
     parser.add_argument('--l2_weight', type=float, default=5e-3, help='weight of l2 regularization')
     parser.add_argument('--lr', type=float, default=0.0005, help='learning rate')  #3e-4
     parser.add_argument('--save_path', type=str, default="./data/1week/hop2/version1/", help='model save path')
@@ -47,6 +47,7 @@ def get_training_args():
     parser.add_argument('--balance', type=float, default=0.004, help='learning rate')  #3e-4
     parser.add_argument('--version', type=int, default=0,
                             help='Different version under the same set')
+    parser.add_argument('--dropout_rate', type=float, default=0.3, help='dropout rate')
 
     show_loss = True
     show_time = False

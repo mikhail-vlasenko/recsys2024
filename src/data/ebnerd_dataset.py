@@ -3,6 +3,7 @@ import zipfile
 from pathlib import Path
 import logging
 from typing import Optional
+from tqdm import tqdm
 
 import torch
 from typing import Union
@@ -62,12 +63,12 @@ class EbnerdDataset(Dataset):
         self.article_df = articles
 
         #preprocess the articles into embedding vectors
-        #self.articles, self.article_mapping = self.preprocess_articles(articles)
+        #self.embedded_articles, self.article_mapping = self.preprocess_articles(articles)
 
         #something idk
-        self.lookup_article_index, self.lookup_article_matrix = create_lookup_objects(
-            self.article_mapping, unknown_representation=self.unknown_representation
-        )
+        #self.lookup_article_index, self.lookup_article_matrix = create_lookup_objects(
+        #    self.article_mapping, unknown_representation=self.unknown_representation
+        #)
 
     def __len__(self):
         return len(self.df_behaviors)
@@ -84,6 +85,7 @@ class EbnerdDataset(Dataset):
         return len(self.df_behaviors[DEFAULT_USER_COL].unique())
     
     def get_word_ids(self, max_title_length) -> Tensor:
+        print("getting word ids")
         #intialize the tokenizer
         TRANSFORMER_MODEL_NAME = "FacebookAI/xlm-roberta-base"
         TEXT_COLUMNS_TO_USE = [DEFAULT_TITLE_COL, DEFAULT_ENTITIES_COL, DEFAULT_NER_COL]
@@ -91,33 +93,37 @@ class EbnerdDataset(Dataset):
         transformer_tokenizer = AutoTokenizer.from_pretrained(TRANSFORMER_MODEL_NAME)
 
         #encode the titles 
-        titles_list= list(self.article_df[DEFAULT_TITLE_COL])
+        titles_list= self.article_df[DEFAULT_TITLE_COL].to_list()
+        print(titles_list)
         encoding = transformer_tokenizer(titles_list, return_tensors='pt', padding='max_length', max_length=max_title_length, truncation=True)
         title_word_ids = encoding['input_ids']
 
         #encode the enities
-        entities_list = list(self.article_df[DEFAULT_ENTITIES_COL])
-        encoding = transformer_tokenizer(entities_list, return_tensors='pt', padding='max_length', max_length=max_title_length, truncation=True)
+        entities_list = self.article_df[DEFAULT_ENTITIES_COL].to_list()
+        placeholder = ['[UNK]']  # Use an appropriate placeholder
+        prepared_entities = [ent if ent else placeholder for ent in entities_list]
+        print(prepared_entities)
+        encoding = transformer_tokenizer(prepared_entities, return_tensors='pt', padding='longest', truncation=True, is_split_into_words =True)
         entities_word_ids = encoding['input_ids']
 
         #encode the ner
-        ner_list = list(self.article_df[DEFAULT_NER_COL])
+        ner_list = self.article_df[DEFAULT_NER_COL].to_list()
         ner_dict = self.build_dictionary(ner_list)
         ner_word_ids = self.tokenize_texts(ner_list, ner_dict, max_title_length)
 
         return title_word_ids, entities_word_ids, ner_word_ids
     
-    def build_dictionary(texts):
+    def build_dictionary(self, texts):
         unique_words = set()
-        for text in texts:
+        for text in tqdm(texts):
             unique_words.update(text)  # Assuming text is a list of words
         word_dict = {'[PAD]': 0}  # Initialize with padding token
-        for word in unique_words:
+        for word in tqdm(unique_words):
             if word not in word_dict:  # This check prevents overwriting existing tokens
                 word_dict[word] = len(word_dict)
         return word_dict
 
-    def tokenize_texts(texts, word_dict, max_length):
+    def tokenize_texts(self, texts, word_dict, max_length):
         return [
             (tokens := [word_dict.get(word, word_dict['[PAD]']) for word in text])[:max_length] +
             [word_dict['[PAD]']] * (max_length - len(tokens))
