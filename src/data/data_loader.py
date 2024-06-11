@@ -9,6 +9,7 @@ def load_new_data(args):
     news_entity = r['news_entity']
     news_group = r['news_group']
     news_title = r['news_title'][:, :args.title_len]
+    #I think above are precomputed emedddings and below are the actual data
 
     with open("./data/train_user_news.txt", 'r') as file:
         train_user_news = eval(file.read())
@@ -31,6 +32,8 @@ def load_new_data(args):
     test_data = test_data[l:]
 
     # train_data columns are user_indices, news_indices, some_bullshit, labels
+
+    #args, torch.tensor(news_title), torch.tensor(news_entity), torch.tensor(news_group), len(train_user_news), len(news_title)
 
     return train_data, eval_data, test_data, train_user_news, train_news_user, test_user_news, test_news_user, \
         news_title, news_entity, news_group

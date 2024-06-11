@@ -13,6 +13,16 @@ from lightning.pytorch.callbacks import (
 from lightning.pytorch.loggers import WandbLogger
 from src.model.original_lightning_module import OriginalModule
 from src.model.components.model import Model
+from transformers import BertTokenizer, BertModel
+
+def pre_compute_embeddings(text_tensor):
+    tokenizer = BertTokenizer.from_pretrained('bert-base-multilingual-uncased')
+    model = BertModel.from_pretrained("bert-base-multilingual-uncased")
+    
+    encoded_input = tokenizer(text_tensor, return_tensors='pt')
+    output = model(**encoded_input) # output of size 
+
+
 
 def main():
     args = get_training_args()
@@ -23,7 +33,10 @@ def main():
 
     datamodule = OriginalModelDatamodule(data_download_path=data_download_path, batch_size=args.batch_size, num_workers=args.num_workers, api_key=args.api_key)
 
+    self, args, news_title, news_entity, news_group, n_user, n_news
+
     news_title, news_entity, news_group, train_user_news, train_news_user = datamodule.get_data()
+    
     net = Model(args, torch.tensor(news_title), torch.tensor(news_entity), torch.tensor(news_group), len(train_user_news), len(news_title))
 
     module = OriginalModule(net, torch.optim.Adam, torch.optim.lr_scheduler.StepLR, compile=True)
