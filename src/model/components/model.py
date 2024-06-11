@@ -38,9 +38,12 @@ class Model(nn.Module):
         self.n_user = n_user
         self.n_news = n_news
 
-        self.group_embedding = nn.Parameter(torch.randn(12, 50) * 0.1)
-        self.user_emb_matrix = nn.Parameter(torch.randn(n_user + 1, self.user_dim) * 0.1)
-        self.word_emb_matrix = nn.Parameter(torch.randn(n_word + 1, 50) * 0.1)
+        n_group = 12
+        word_dim = 50
+        # param initialization is a little different from the original
+        self.group_embedding = nn.Embedding(n_group, word_dim)
+        self.user_emb_matrix = nn.Embedding(n_user + 1, self.user_dim)
+        self.word_emb_matrix = nn.Embedding(n_word + 1, word_dim)
 
         # self.user_emb_matrix = F.normalize(self.user_emb_matrix, dim=-1)
         # self.word_emb_matrix = F.normalize(self.word_emb_matrix, dim=-1)
@@ -117,14 +120,14 @@ class Model(nn.Module):
         news_neighbors = F.embedding(news[0][:, 0], news_user)
         news.append(news_neighbors)
 
-        user_hop_vectors = F.embedding(user[0], self.user_emb_matrix).reshape(-1, self.user_dim)
+        user_hop_vectors = self.user_emb_matrix(user[0]).reshape(-1, self.user_dim)
         user_hop_vectors = F.relu(self.user_transform(user_hop_vectors))
         user_vectors.append(user_hop_vectors.reshape(self.batch_size, -1, self.dim))
         user_neighbors = F.embedding(user[0][:, 0], user_news)
         user.append(user_neighbors)
 
         if self.n_iter >= 1:
-            news_hop_vectors = F.embedding(news[1][:, :u], self.user_emb_matrix).reshape(-1, self.user_dim)
+            news_hop_vectors = self.user_emb_matrix(news[1][:, :u]).reshape(-1, self.user_dim)
             news_hop_vectors = F.relu(self.user_transform(news_hop_vectors))
             news_hop_vectors = news_hop_vectors.reshape(self.batch_size, -1, self.dim)
             news_neighbors = user_news[news[1][:, :u]].view(self.batch_size, -1)
@@ -146,7 +149,7 @@ class Model(nn.Module):
             news_vectors.append(news_hop_vectors)
             news.append(news_neighbors)
 
-            user_hop_vectors = F.embedding(user[2], self.user_emb_matrix).reshape(-1, self.user_dim)
+            user_hop_vectors = self.user_emb_matrix(user[2]).reshape(-1, self.user_dim)
             user_hop_vectors = F.relu(self.user_transform(user_hop_vectors))
             user_hop_vectors = user_hop_vectors.reshape(self.batch_size, -1, self.dim)
             user_neighbors = user_news[user[2]].view(self.batch_size, -1)
@@ -210,12 +213,14 @@ class Model(nn.Module):
 
     def convolution(self, inputs):
         title_lookup = F.embedding(inputs, self.title).reshape(-1, self.title_len)
-        title_embed = F.embedding(title_lookup, self.word_emb_matrix).unsqueeze(-1)
+        title_embed = self.word_emb_matrix(title_lookup).unsqueeze(-1)
 
         item_lookup = F.embedding(inputs, self.news_entity).reshape(-1, 40)
         group_lookup = F.embedding(inputs, self.news_group).reshape(-1, 40)
-        item_embed = F.embedding(item_lookup, self.word_emb_matrix).unsqueeze(2)
-        group_embed = F.embedding(group_lookup, self.group_embedding).unsqueeze(2)
+
+        item_embed = self.word_emb_matrix(item_lookup).unsqueeze(2)
+        group_embed = self.group_embedding(group_lookup).unsqueeze(2)
+
         item_group_embed = torch.cat((item_embed, group_embed), 2).reshape(-1, 80, 50).unsqueeze(-1)
 
         # in tf1 conv input is NHWC, not NCHW
