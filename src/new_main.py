@@ -32,11 +32,10 @@ def main():
     data_download_path = EbnerdVariants.init_variant(args.ebnerd_variant).value.path
 
     datamodule = OriginalModelDatamodule(data_download_path=data_download_path, batch_size=args.batch_size, num_workers=args.num_workers, api_key=args.api_key)
-
-    self, args, news_title, news_entity, news_group, n_user, n_news
-
+    datamodule.data_train.setup()
+    datamodule.data_train.__getitem__()
     news_title, news_entity, news_group, train_user_news, train_news_user = datamodule.get_data()
-    
+
     net = Model(args, torch.tensor(news_title), torch.tensor(news_entity), torch.tensor(news_group), len(train_user_news), len(news_title))
 
     module = OriginalModule(net, torch.optim.Adam, torch.optim.lr_scheduler.StepLR, compile=True)
