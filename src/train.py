@@ -64,7 +64,7 @@ def train_model(args, model, train_data, eval_data, test_data, train_user_news, 
 
             # i feel like this is a bad way to do l2 regularization
             l2_loss = sum(torch.norm(param) for param in model.parameters())
-            infer_loss, ret_w = model.infer_loss(user_embeddings, news_embeddings)
+            infer_loss = model.infer_loss(user_embeddings, news_embeddings)
 
             loss = (1 - args.balance) * total_loss + args.balance * infer_loss + args.l2_weight * l2_loss
 
