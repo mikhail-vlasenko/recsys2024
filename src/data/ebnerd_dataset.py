@@ -76,7 +76,7 @@ class EbnerdDataset(Dataset):
        
         return row
     
-    def preprocess_articles(self, articles: pl.DataFrame) -> pl.DataFrame:
+    def preprocess_articles(self, df_articles: pl.DataFrame) -> pl.DataFrame:
         TRANSFORMER_MODEL_NAME = "FacebookAI/xlm-roberta-base"
         # this should be changed probably to be a parameter
         TEXT_COLUMNS_TO_USE = [DEFAULT_SUBTITLE_COL, DEFAULT_TITLE_COL] 
