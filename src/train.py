@@ -6,7 +6,7 @@ import datetime
 import torch
 from sklearn.metrics import roc_auc_score, f1_score
 from torch import nn
-from torch.utils.data import DataLoader, TensorDataset
+from torch.utils.data import DataLoader, TensorDataset, Subset
 import torch.nn.functional as F
 from scipy import sparse
 from collections import defaultdict
@@ -31,6 +31,8 @@ def train_model(args, model, train_data, eval_data, test_data, train_user_news, 
         # torch.tensor(train_user_news, dtype=torch.long),
         # torch.tensor(train_news_user, dtype=torch.long)
     )
+    # train_dataset = Subset(train_dataset, indices=range(len(train_dataset) // 10))
+
     train_loader = DataLoader(train_dataset, batch_size=args.batch_size, shuffle=True)
 
     if args.optimized_subsampling:
