@@ -56,7 +56,7 @@ class EbnerdDataset(Dataset):
 
         self.df_behaviors, self.df_history, articles = self.ebnerd_from_path(path=root_dir, history_size=history_size, mode=mode, data_split=data_split, fraction=fraction)
 
-        self.unknown_representation = [0]
+        self.unknown_representation = "zeros"
 
         #preprocess the articles into embedding vectors
         self.articles, self.article_mapping = self.preprocess_articles(articles)
