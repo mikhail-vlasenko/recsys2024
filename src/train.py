@@ -13,7 +13,7 @@ from collections import defaultdict
 
 from tqdm import tqdm
 
-from src.data.data_loader import train_random_neighbor, test_random_neighbor
+from src.data.data_loader import random_neighbor
 
 
 def train_model(args, model, train_data, eval_data, test_data, train_user_news, train_news_user, test_user_news,
@@ -42,14 +42,16 @@ def train_model(args, model, train_data, eval_data, test_data, train_user_news, 
     # eval_loader = DataLoader(eval_dataset, batch_size=args.batch_size, shuffle=False)
 
     criterion = F.binary_cross_entropy_with_logits
-    optimizer = torch.optim.Adam(model.parameters(), lr=args.lr)
+    optimizer = torch.optim.Adam(model.parameters(), lr=args.lr, weight_decay=args.l2_weight)
 
     for epoch in range(args.n_epochs):
         model.train()
         total_loss = 0
         for user_indices, news_indices, labels in tqdm(train_loader):
-            user_news, news_user = train_random_neighbor(args, train_user_news, train_news_user,
-                                                                     len(news_title))
+            s = time.time()
+            user_news, news_user = random_neighbor(args, train_user_news, train_news_user,
+                                                   len(news_title))
+            print(f"Time by random neighbor: {time.time() - s}")
 
             user_indices, news_indices, labels = user_indices.to(device), news_indices.to(device), labels.to(device)
             user_news, news_user = torch.tensor(user_news, dtype=torch.long).to(device), torch.tensor(
@@ -59,16 +61,19 @@ def train_model(args, model, train_data, eval_data, test_data, train_user_news, 
             scores, scores_normalized, predict_label, user_embeddings, news_embeddings = model(
                 user_indices, news_indices, user_news, news_user
             )
+            print(f"Time with forward pass: {time.time() - s}")
 
             total_loss = criterion(scores, labels)
 
-            # i feel like this is a bad way to do l2 regularization
-            l2_loss = sum(torch.norm(param) for param in model.parameters())
             infer_loss = model.infer_loss(user_embeddings, news_embeddings)
 
-            loss = (1 - args.balance) * total_loss + args.balance * infer_loss + args.l2_weight * l2_loss
+            print(f"Time with loss: {time.time() - s}")
+
+            loss = (1 - args.balance) * total_loss + args.balance * infer_loss
 
             loss.backward()
+
+            print(f"Time with backward pass: {time.time() - s}")
             optimizer.step()
             total_loss += loss.item()
 

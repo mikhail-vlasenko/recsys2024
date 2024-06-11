@@ -36,45 +36,23 @@ def load_new_data(args):
         news_title, news_entity, news_group
 
 
-def train_random_neighbor(args, train_user_news, train_news_user, news_len):
-    user_news = np.zeros([len(train_user_news), args.news_neighbor], dtype=np.int32)
-    for i in range(1, len(train_user_news)):
-        n_neighbors = len(train_user_news[i])
+def random_neighbor(args, input_user_news, input_news_user, news_len):
+    user_news = np.zeros([len(input_user_news), args.news_neighbor], dtype=np.int32)
+    for i in range(1, len(input_user_news)):
+        n_neighbors = len(input_user_news[i])
         if n_neighbors >= args.news_neighbor:
             sampled_indices = np.random.choice(list(range(n_neighbors)), size=args.news_neighbor, replace=False)
         else:
             sampled_indices = np.random.choice(list(range(n_neighbors)), size=args.news_neighbor, replace=True)
-        user_news[i] = np.array([train_user_news[i][k] for k in sampled_indices])
+        user_news[i] = np.array([input_user_news[i][k] for k in sampled_indices])
 
     news_user = np.zeros([news_len, args.user_neighbor], dtype=np.int32)
-    for i in train_news_user:
-        n_neighbors = len(train_news_user[i])
+    for i in input_news_user:
+        n_neighbors = len(input_news_user[i])
         if n_neighbors >= args.user_neighbor:
             sampled_indices = np.random.choice(list(range(n_neighbors)), size=args.user_neighbor, replace=False)
         else:
             sampled_indices = np.random.choice(list(range(n_neighbors)), size=args.user_neighbor, replace=True)
-        news_user[int(i)] = np.array([train_news_user[i][k] for k in sampled_indices])
-
-    return user_news, news_user
-
-
-def test_random_neighbor(args, test_user_news, test_news_user, news_len):
-    user_news = np.zeros([len(test_user_news), args.news_neighbor], dtype=np.int32)
-    for i in range(1, len(test_user_news)):
-        n_neighbors = len(test_user_news[i])
-        if n_neighbors >= args.news_neighbor:
-            sampled_indices = np.random.choice(list(range(n_neighbors)), size=args.news_neighbor, replace=False)
-        else:
-            sampled_indices = np.random.choice(list(range(n_neighbors)), size=args.news_neighbor, replace=True)
-        user_news[i] = np.array([test_user_news[i][k] for k in sampled_indices])
-
-    news_user = np.zeros([news_len, args.user_neighbor], dtype=np.int32)
-    for i in test_news_user:
-        n_neighbors = len(test_news_user[i])
-        if n_neighbors >= args.user_neighbor:
-            sampled_indices = np.random.choice(list(range(n_neighbors)), size=args.user_neighbor, replace=False)
-        else:
-            sampled_indices = np.random.choice(list(range(n_neighbors)), size=args.user_neighbor, replace=True)
-        news_user[int(i)] = np.array([test_news_user[i][k] for k in sampled_indices])
+        news_user[int(i)] = np.array([input_news_user[i][k] for k in sampled_indices])
 
     return user_news, news_user
