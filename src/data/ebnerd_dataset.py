@@ -110,6 +110,7 @@ class EbnerdDataset(Dataset):
             path = Path(path) / 'ebnerd_testset' / mode
             return None, None
         else:
+            article_path = Path(path) / data_split / "articles.parquet"
             path = Path(path) / data_split / mode
         
         df_history = (
@@ -153,7 +154,7 @@ class EbnerdDataset(Dataset):
             )
 
         #also load article data 
-        df_articles = pl.read_parquet(path.joinpath("articles.parquet"))
+        df_articles = pl.read_parquet(article_path)
 
 
         return df_behaviors, df_history, df_articles
