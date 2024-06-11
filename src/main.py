@@ -10,9 +10,8 @@ from src.data.data_loader import load_new_data
 from src.model.components.model import Model
 from src.train import train_model
 import os
-os.environ['TF_CPP_MIN_LOG_LEVEL'] = '0'
-os.environ["CUDA_VISIBLE_DEVICES"] = "1"
 
+# os.environ['CUDA_LAUNCH_BLOCKING'] = '1'
 
 
 parser = argparse.ArgumentParser()
@@ -48,6 +47,7 @@ parser.add_argument('--balance', type=float, default=0.004, help='learning rate'
 parser.add_argument('--version', type=int, default=0,
                         help='Different version under the same set')
 parser.add_argument('--dropout_rate', type=float, default=0.3, help='dropout rate')
+parser.add_argument('--optimized_subsampling', type=bool, default=True)
 
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")

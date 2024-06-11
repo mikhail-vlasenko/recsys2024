@@ -1,6 +1,8 @@
 import numpy as np
 import json
 
+import torch
+
 
 def load_new_data(args):
     r = np.load("./data/data.npz", allow_pickle=True)
@@ -57,5 +59,17 @@ def random_neighbor(args, input_user_news, input_news_user, news_len):
         else:
             sampled_indices = np.random.choice(list(range(n_neighbors)), size=args.user_neighbor, replace=True)
         news_user[int(i)] = np.array([input_news_user[i][k] for k in sampled_indices])
+
+    return user_news, news_user
+
+
+def optimized_random_neighbor(args, input_user_news: torch.Tensor, input_news_user: torch.Tensor, user_lengths, news_lengths):
+    user_floats = torch.rand([len(input_user_news), args.news_neighbor], device=input_user_news.device)
+    user_indices = (user_floats * user_lengths).floor().to(torch.long)
+    user_news = torch.gather(input_user_news, 1, user_indices)
+
+    news_floats = torch.rand([len(input_news_user), args.user_neighbor], device=input_user_news.device)
+    news_indices = (news_floats * news_lengths).floor().to(torch.long)
+    news_user = torch.gather(input_news_user, 1, news_indices)
 
     return user_news, news_user

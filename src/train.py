@@ -13,8 +13,7 @@ from collections import defaultdict
 
 from tqdm import tqdm
 
-from src.data.data_loader import random_neighbor
-
+from src.data.data_loader import random_neighbor, optimized_random_neighbor
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -34,6 +33,33 @@ def train_model(args, model, train_data, eval_data, test_data, train_user_news, 
     )
     train_loader = DataLoader(train_dataset, batch_size=args.batch_size, shuffle=True)
 
+    if args.optimized_subsampling:
+        # dict to list
+        max_news_id = len(news_title)
+        temp_train_news_user = []
+        for i in range(max_news_id):
+            if i in train_news_user:
+                temp_train_news_user.append(train_news_user[i])
+            else:
+                temp_train_news_user.append([])
+        train_news_user = temp_train_news_user
+        user_lengths = torch.tensor([len(train_user_news[i]) for i in range(len(train_user_news))]).unsqueeze(1)#.to(device)
+        news_lengths = torch.tensor([len(train_news_user[i]) for i in range(len(train_news_user))]).unsqueeze(1)#.to(device)
+
+        def list_of_lists_to_torch(lst, pad_value, max_len, device):
+            tensors = []
+            for l in tqdm(
+                    lst,
+                    desc=f"Converting to torch (needs {max_len * len(lst) * 4 / 1024 / 1024:.2f} MB on {device})"
+            ):
+                pad = (0, max_len - len(l))  # pad 0 on the left and to max_len on the right
+                tensors.append(F.pad(torch.tensor(l, dtype=torch.int32, device=device), pad, value=pad_value))
+            return torch.stack(tensors)
+
+        dense_matrix_device = torch.device("cpu")
+        train_user_news = list_of_lists_to_torch(train_user_news, 0, user_lengths.max().item(), dense_matrix_device)
+        train_news_user = list_of_lists_to_torch(train_news_user, 0, news_lengths.max().item(), dense_matrix_device)
+
     # eval_dataset = TensorDataset(
     #     torch.tensor(eval_data[:, 0], dtype=torch.long),
     #     torch.tensor(eval_data[:, 1], dtype=torch.long),
@@ -50,8 +76,11 @@ def train_model(args, model, train_data, eval_data, test_data, train_user_news, 
         model.train()
         total_loss = 0
         for user_indices, news_indices, labels in tqdm(train_loader):
-            user_news, news_user = random_neighbor(args, train_user_news, train_news_user,
-                                                   len(news_title))
+            if args.optimized_subsampling:
+                user_news, news_user = optimized_random_neighbor(args, train_user_news, train_news_user,
+                                                                 user_lengths, news_lengths)
+            else:
+                user_news, news_user = random_neighbor(args, train_user_news, train_news_user, len(news_title))
 
             user_indices, news_indices, labels = user_indices.to(device), news_indices.to(device), labels.to(device)
             user_news, news_user = torch.tensor(user_news, dtype=torch.long).to(device), torch.tensor(
