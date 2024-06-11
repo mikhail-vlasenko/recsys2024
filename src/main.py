@@ -50,6 +50,8 @@ parser.add_argument('--version', type=int, default=0,
 parser.add_argument('--dropout_rate', type=float, default=0.3, help='dropout rate')
 
 
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
 show_loss = True
 show_time = False
 
@@ -68,5 +70,10 @@ with open(fast_load_path, 'rb') as f:
 
 train_data, eval_data, test_data, train_user_news, train_news_user, test_user_news, test_news_user, news_title, news_entity, news_group = data_tuple
 
-model = Model(args, torch.tensor(news_title), torch.tensor(news_entity), torch.tensor(news_group), len(train_user_news), len(news_title))
+model = Model(
+    args,
+    torch.tensor(news_title).to(device), torch.tensor(news_entity).to(device), torch.tensor(news_group).to(device),
+    len(train_user_news), len(news_title)
+)
+
 trained_model = train_model(args, model, train_data, eval_data, test_data, train_user_news, train_news_user, test_user_news, test_news_user, news_title, news_entity, news_group)

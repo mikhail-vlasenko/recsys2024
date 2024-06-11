@@ -38,9 +38,15 @@ class Model(nn.Module):
         self.n_user = n_user
         self.n_news = n_news
 
-        self.group_embedding = nn.Parameter(torch.randn(12, 50) * 0.1)
-        self.user_emb_matrix = nn.Parameter(torch.randn(n_user + 1, self.user_dim) * 0.1)
-        self.word_emb_matrix = nn.Parameter(torch.randn(n_word + 1, 50) * 0.1)
+        n_group = 12
+        word_dim = 50
+        # param initialization is a little different from the original
+        self.group_embedding = nn.Embedding(n_group, word_dim)
+        self.user_emb_matrix = nn.Embedding(n_user + 1, self.user_dim)
+        self.word_emb_matrix = nn.Embedding(n_word + 1, word_dim)
+
+        # self.user_emb_matrix = F.normalize(self.user_emb_matrix, dim=-1)
+        # self.word_emb_matrix = F.normalize(self.word_emb_matrix, dim=-1)
 
         self.filter_shape_item = [40, 20, 1, 8]
         self.input_size_item = 10 * 8 * 8
@@ -49,15 +55,13 @@ class Model(nn.Module):
         self.filter_shape = [2, 8, 1, 4]
         self.cat_size = 7 * 30 * 4
 
+        self.user_transform = nn.Linear(self.user_dim, self.dim)
+        self.item_transform = nn.Linear(self.cnn_out_size, self.dim)
+
         routing_layers = 1
         self.router = RoutingLayer(routing_layers, self.ncaps, self.nhidden, self.batch_size, args.dropout_rate, None)
 
         self.conv_layers = nn.ModuleDict()
-        self.build_model()
-
-    def build_model(self):
-        # self.user_emb_matrix = F.normalize(self.user_emb_matrix, dim=-1)
-        # self.word_emb_matrix = F.normalize(self.word_emb_matrix, dim=-1)
 
         self.conv_layers['item'] = nn.Conv2d(1, 8, kernel_size=(40, 20), stride=(2, 2))
         self.conv_layers['title'] = nn.Conv2d(1, 8, kernel_size=(2, 20), stride=(2, 2))
@@ -66,6 +70,10 @@ class Model(nn.Module):
         self.pool_title = nn.MaxPool2d(kernel_size=(2, 1), stride=(1, 2))
 
         self.dense = nn.Linear(self.input_size_item + self.input_size_title, self.cnn_out_size)
+
+        caps = self.ncaps - (self.n_iter - 1) * self.dcaps
+        self.last_linear = nn.Linear(caps * self.nhidden, caps * self.nhidden)
+        self.ret_linear = nn.Linear(self.nhidden, caps)
 
     def forward(self, user_indices, news_indices, user_news, news_user):
         newsvec, uservec = self.get_neighbors(news_indices, user_indices, user_news, news_user)
@@ -78,32 +86,23 @@ class Model(nn.Module):
         return scores, scores_normalized, predict_label, user_embeddings, news_embeddings
 
     def simple_dot_net(self, x, y):
-        caps = self.ncaps - (self.n_iter - 1) * self.dcaps
-        last_w = nn.Parameter(torch.randn(caps * self.nhidden, caps * self.nhidden) * 0.1)
-        last_b = nn.Parameter(torch.zeros(caps * self.nhidden))
-
-        x_map = torch.matmul(x[-1].reshape(self.batch_size, -1), last_w) + last_b
-        y_map = torch.matmul(y[-1].reshape(self.batch_size, -1), last_w) + last_b
+        x_map = self.last_linear(x[-1].reshape(self.batch_size, -1))
+        y_map = self.last_linear(y[-1].reshape(self.batch_size, -1))
 
         output = torch.sum(x_map * y_map, dim=-1)
         return output
 
     def infer_loss(self, x, y):
-        caps = self.ncaps - (self.n_iter - 1) * self.dcaps
-        # no way these params should be initialized here
-        ret_uw = nn.Parameter(torch.randn(self.nhidden, caps) * 0.1)
-        ret_ub = nn.Parameter(torch.zeros(caps))
+        x_class = self.ret_linear(x[-1].reshape(-1, self.nhidden))
+        y_class = self.ret_linear(y[-1].reshape(-1, self.nhidden))
 
-        x_class = torch.matmul(x[-1].reshape(-1, self.nhidden), ret_uw) + ret_ub
-        y_class = torch.matmul(y[-1].reshape(-1, self.nhidden), ret_uw) + ret_ub
-
-        label = torch.eye(caps).repeat(self.batch_size, 1)
+        label = torch.eye(self.ret_linear.out_features).repeat(self.batch_size, 1).to(x_class.device)
         user_infer_loss = torch.mean(torch.sum(F.cross_entropy(x_class, label)))
         news_infer_loss = torch.mean(torch.sum(F.cross_entropy(y_class, label)))
 
         loss = user_infer_loss + news_infer_loss
 
-        return loss, ret_uw
+        return loss
 
     def get_neighbors(self, news_seeds, user_seeds, user_news, news_user):
         news_seeds = news_seeds.unsqueeze(1)
@@ -115,33 +114,28 @@ class Model(nn.Module):
         n = self.news_neighbor
         u = self.user_neighbor
 
-        user_weights = nn.Parameter(torch.randn(self.user_dim, self.dim) * 0.1)
-        user_bias = nn.Parameter(torch.randn(self.dim) * 0.1)
-        item_weights = nn.Parameter(torch.randn(self.cnn_out_size, self.dim) * 0.1)
-        item_bias = nn.Parameter(torch.randn(self.dim) * 0.1)
-
         news_hop_vectors = self.convolution(news[0]).reshape(-1, self.cnn_out_size)
-        news_hop_vectors = F.relu(torch.matmul(news_hop_vectors, item_weights) + item_bias)
+        news_hop_vectors = F.relu(self.item_transform(news_hop_vectors))
         news_vectors.append(news_hop_vectors.reshape(self.batch_size, -1, self.dim))
         news_neighbors = F.embedding(news[0][:, 0], news_user)
         news.append(news_neighbors)
 
-        user_hop_vectors = F.embedding(user[0], self.user_emb_matrix).reshape(-1, self.user_dim)
-        user_hop_vectors = F.relu(torch.matmul(user_hop_vectors, user_weights) + user_bias)
+        user_hop_vectors = self.user_emb_matrix(user[0]).reshape(-1, self.user_dim)
+        user_hop_vectors = F.relu(self.user_transform(user_hop_vectors))
         user_vectors.append(user_hop_vectors.reshape(self.batch_size, -1, self.dim))
         user_neighbors = F.embedding(user[0][:, 0], user_news)
         user.append(user_neighbors)
 
         if self.n_iter >= 1:
-            news_hop_vectors = F.embedding(news[1][:, :u], self.user_emb_matrix).reshape(-1, self.user_dim)
-            news_hop_vectors = F.relu(torch.matmul(news_hop_vectors, user_weights) + user_bias)
+            news_hop_vectors = self.user_emb_matrix(news[1][:, :u]).reshape(-1, self.user_dim)
+            news_hop_vectors = F.relu(self.user_transform(news_hop_vectors))
             news_hop_vectors = news_hop_vectors.reshape(self.batch_size, -1, self.dim)
             news_neighbors = user_news[news[1][:, :u]].view(self.batch_size, -1)
             news_vectors.append(news_hop_vectors)
             news.append(news_neighbors)
 
             user_hop_vectors = self.convolution(user[1]).reshape(-1, self.cnn_out_size)
-            user_hop_vectors = F.relu(torch.matmul(user_hop_vectors, item_weights) + item_bias)
+            user_hop_vectors = F.relu(self.item_transform(user_hop_vectors))
             user_hop_vectors = user_hop_vectors.reshape(self.batch_size, -1, self.dim)
             user_neighbors = news_user[user[1][:, :n]].view(self.batch_size, -1)
             user_vectors.append(user_hop_vectors)
@@ -149,14 +143,14 @@ class Model(nn.Module):
 
         if self.n_iter >= 2:
             news_hop_vectors = self.convolution(news[2]).reshape(-1, self.cnn_out_size)
-            news_hop_vectors = F.relu(torch.matmul(news_hop_vectors, item_weights) + item_bias)
+            news_hop_vectors = F.relu(self.item_transform(news_hop_vectors))
             news_hop_vectors = news_hop_vectors.reshape(self.batch_size, -1, self.dim)
             news_neighbors = news_user[news[2]].view(self.batch_size, -1)
             news_vectors.append(news_hop_vectors)
             news.append(news_neighbors)
 
-            user_hop_vectors = F.embedding(user[2], self.user_emb_matrix).reshape(-1, self.user_dim)
-            user_hop_vectors = F.relu(torch.matmul(user_hop_vectors, user_weights) + user_bias)
+            user_hop_vectors = self.user_emb_matrix(user[2]).reshape(-1, self.user_dim)
+            user_hop_vectors = F.relu(self.user_transform(user_hop_vectors))
             user_hop_vectors = user_hop_vectors.reshape(self.batch_size, -1, self.dim)
             user_neighbors = user_news[user[2]].view(self.batch_size, -1)
             user_vectors.append(user_hop_vectors)
@@ -219,12 +213,14 @@ class Model(nn.Module):
 
     def convolution(self, inputs):
         title_lookup = F.embedding(inputs, self.title).reshape(-1, self.title_len)
-        title_embed = F.embedding(title_lookup, self.word_emb_matrix).unsqueeze(-1)
+        title_embed = self.word_emb_matrix(title_lookup).unsqueeze(-1)
 
         item_lookup = F.embedding(inputs, self.news_entity).reshape(-1, 40)
         group_lookup = F.embedding(inputs, self.news_group).reshape(-1, 40)
-        item_embed = F.embedding(item_lookup, self.word_emb_matrix).unsqueeze(2)
-        group_embed = F.embedding(group_lookup, self.group_embedding).unsqueeze(2)
+
+        item_embed = self.word_emb_matrix(item_lookup).unsqueeze(2)
+        group_embed = self.group_embedding(group_lookup).unsqueeze(2)
+
         item_group_embed = torch.cat((item_embed, group_embed), 2).reshape(-1, 80, 50).unsqueeze(-1)
 
         # in tf1 conv input is NHWC, not NCHW
@@ -252,21 +248,3 @@ class Model(nn.Module):
         pool = F.relu(pool)
 
         return pool
-
-    # def train(self, batch_data):
-    #     user_indices, news_indices, labels, user_news, news_user = batch_data
-    #     loss, scores_normalized, predict_label = self(user_indices, news_indices, labels, user_news, news_user)
-    #
-    #     auc = roc_auc_score(labels.cpu().numpy(), scores_normalized.detach().cpu().numpy())
-    #     f1 = f1_score(labels.cpu().numpy(), predict_label.cpu().numpy())
-    #
-    #     return loss, auc, f1
-    #
-    # def eval(self, batch_data):
-    #     user_indices, news_indices, labels, user_news, news_user = batch_data
-    #     _, scores_normalized, predict_label = self(user_indices, news_indices, labels, user_news, news_user)
-    #
-    #     auc = roc_auc_score(labels.cpu().numpy(), scores_normalized.detach().cpu().numpy())
-    #     f1 = f1_score(labels.cpu().numpy(), predict_label.cpu().numpy())
-    #
-    #     return auc, f1
