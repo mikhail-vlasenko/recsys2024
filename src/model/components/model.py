@@ -96,7 +96,7 @@ class Model(nn.Module):
         x_class = self.ret_linear(x[-1].reshape(-1, self.nhidden))
         y_class = self.ret_linear(y[-1].reshape(-1, self.nhidden))
 
-        label = torch.eye(self.ret_linear.out_features).repeat(self.batch_size, 1)
+        label = torch.eye(self.ret_linear.out_features).repeat(self.batch_size, 1).to(x_class.device)
         user_infer_loss = torch.mean(torch.sum(F.cross_entropy(x_class, label)))
         news_infer_loss = torch.mean(torch.sum(F.cross_entropy(y_class, label)))
 

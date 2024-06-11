@@ -16,9 +16,11 @@ from tqdm import tqdm
 from src.data.data_loader import random_neighbor
 
 
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
+
 def train_model(args, model, train_data, eval_data, test_data, train_user_news, train_news_user, test_user_news,
                 test_news_user, news_title, news_entity, news_group):
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     model.to(device)
 
     train_data = np.array(train_data[:, [0, 1, 3]], dtype=np.int32)
@@ -48,10 +50,8 @@ def train_model(args, model, train_data, eval_data, test_data, train_user_news, 
         model.train()
         total_loss = 0
         for user_indices, news_indices, labels in tqdm(train_loader):
-            s = time.time()
             user_news, news_user = random_neighbor(args, train_user_news, train_news_user,
                                                    len(news_title))
-            print(f"Time by random neighbor: {time.time() - s}")
 
             user_indices, news_indices, labels = user_indices.to(device), news_indices.to(device), labels.to(device)
             user_news, news_user = torch.tensor(user_news, dtype=torch.long).to(device), torch.tensor(
@@ -61,19 +61,12 @@ def train_model(args, model, train_data, eval_data, test_data, train_user_news, 
             scores, scores_normalized, predict_label, user_embeddings, news_embeddings = model(
                 user_indices, news_indices, user_news, news_user
             )
-            print(f"Time with forward pass: {time.time() - s}")
 
             total_loss = criterion(scores, labels)
-
             infer_loss = model.infer_loss(user_embeddings, news_embeddings)
-
-            print(f"Time with loss: {time.time() - s}")
-
             loss = (1 - args.balance) * total_loss + args.balance * infer_loss
 
             loss.backward()
-
-            print(f"Time with backward pass: {time.time() - s}")
             optimizer.step()
             total_loss += loss.item()
 
