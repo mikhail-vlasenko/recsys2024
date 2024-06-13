@@ -33,6 +33,10 @@ def train_model(args, model, train_data, eval_data, test_data, train_user_news, 
     )
     # train_dataset = Subset(train_dataset, indices=range(len(train_dataset) // 10))
 
+    #what are these indices exactly??
+    print('train dataset element looks like')
+    print(train_dataset[0])
+
     train_loader = DataLoader(train_dataset, batch_size=args.batch_size, shuffle=True)
 
     if args.optimized_subsampling:

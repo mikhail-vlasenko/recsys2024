@@ -78,6 +78,7 @@ class EbnerdDataset(Dataset):
         TODO: im really confused and idk if this is the best way to do things, but its something I can test atleast 
         """
         row = self.df_behaviors.row(idx)
+        # get the following elements from the datarow, for user_indices, news_indices, labels in tqdm(train_loader):
        
         return row
     
