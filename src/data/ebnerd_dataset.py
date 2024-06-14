@@ -12,7 +12,6 @@ from torch.utils.data import Dataset
 
 from transformers import AutoTokenizer, AutoModel
 from pathlib import Path
-import tensorflow as tf
 import polars as pl
 import numpy as np
 

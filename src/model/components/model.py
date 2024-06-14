@@ -58,8 +58,14 @@ class Model(nn.Module):
         self.user_transform = nn.Linear(self.user_dim, self.dim)
         self.item_transform = nn.Linear(self.cnn_out_size, self.dim)
 
-        routing_layers = 1
-        self.router = RoutingLayer(routing_layers, self.ncaps, self.nhidden, self.batch_size, args.dropout_rate, None)
+        assert self.n_iter == 2, "router isn't adapted to work with n_iter != 2"
+        routing_layers = [i for i in range(self.n_iter)]
+        inp_caps = [None, self.ncaps]
+        out_caps = [self.ncaps, self.ncaps - self.dcaps]
+        self.routers = [
+            RoutingLayer(routing_layers[i], out_caps[i], self.nhidden, self.batch_size, args.dropout_rate, inp_caps[i])
+            for i in range(self.n_iter)
+        ]
 
         self.conv_layers = nn.ModuleDict()
 
@@ -77,7 +83,7 @@ class Model(nn.Module):
 
     def forward(self, user_indices, news_indices, user_news, news_user):
         newsvec, uservec = self.get_neighbors(news_indices, user_indices, user_news, news_user)
-        news_embeddings, user_embeddings, aggregators = self.aggregate(newsvec, uservec)
+        news_embeddings, user_embeddings = self.aggregate(newsvec, uservec)
 
         scores = torch.squeeze(self.simple_dot_net(user_embeddings, news_embeddings))
         scores_normalized = torch.sigmoid(scores)
@@ -160,8 +166,6 @@ class Model(nn.Module):
         return news_vectors, user_vectors
 
     def aggregate(self, news_vectors, user_vectors):
-        conv_ls = []
-        conv = None
         inp_caps, out_caps = None, self.ncaps
         cur_dim = self.dim
 
@@ -169,7 +173,7 @@ class Model(nn.Module):
         user = []
 
         for i in range(self.n_iter):
-            conv_ls.append(conv)
+            router = self.routers[i]
 
             news_vectors_next_iter = []
             user_vectors_next_iter = []
@@ -190,10 +194,10 @@ class Model(nn.Module):
                         news_shape = (self.batch_size, -1, self.news_neighbor, inp_caps * self.nhidden)
                         user_shape = (self.batch_size, -1, self.user_neighbor, inp_caps * self.nhidden)
 
-                news_vector = self.router(self_vectors=news_vectors[hop],
+                news_vector = router(self_vectors=news_vectors[hop],
                                           neighbor_vectors=news_vectors[hop + 1].reshape(*news_shape),
                                           max_iter=self.routit)
-                user_vector = self.router(self_vectors=user_vectors[hop],
+                user_vector = router(self_vectors=user_vectors[hop],
                                           neighbor_vectors=user_vectors[hop + 1].reshape(*user_shape),
                                           max_iter=self.routit)
 
@@ -209,7 +213,7 @@ class Model(nn.Module):
             cur_dim += out_caps * self.nhidden
             inp_caps, out_caps = out_caps, max(1, out_caps - self.dcaps)
 
-        return news, user, conv_ls
+        return news, user
 
     def convolution(self, inputs):
         title_lookup = F.embedding(inputs, self.title).reshape(-1, self.title_len)
