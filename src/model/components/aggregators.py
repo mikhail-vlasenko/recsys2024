@@ -103,21 +103,20 @@ class RoutingLayer(nn.Module):
         if inp_caps is not None:
             self.inp_caps = inp_caps
             if layers == 1:
-                self.w1 = nn.Parameter(torch.randn(inp_caps * cap_sz, cap_sz * out_caps) * (1. / torch.sqrt(inp_caps * cap_sz)))
-                self.b1 = nn.Parameter(torch.randn(cap_sz * out_caps) * (1. / torch.sqrt(cap_sz * out_caps)))
+                self.fc1 = nn.Linear(inp_caps * cap_sz, cap_sz * out_caps)
             if layers == 2:
-                self.w2 = nn.Parameter(torch.randn(inp_caps * cap_sz, cap_sz * out_caps) * (1. / torch.sqrt(inp_caps * cap_sz)))
-                self.b2 = nn.Parameter(torch.randn(cap_sz * out_caps) * (1. / torch.sqrt(cap_sz * out_caps)))
+                self.fc2 = nn.Linear(inp_caps * cap_sz, cap_sz * out_caps)
 
     def forward(self, self_vectors, neighbor_vectors, max_iter):
-        if hasattr(self, 'w1'):
-            self_z = F.relu(torch.matmul(self_vectors.reshape(-1, self.inp_caps * self.cap_sz), self.w1) + self.b1)
-            neighbor_z = F.relu(
-                torch.matmul(neighbor_vectors.reshape(-1, self.inp_caps * self.cap_sz), self.w1) + self.b1)
-        elif hasattr(self, 'w2'):
-            self_z = F.relu(torch.matmul(self_vectors.reshape(-1, self.inp_caps * self.cap_sz), self.w2) + self.b2)
-            neighbor_z = F.relu(
-                torch.matmul(neighbor_vectors.reshape(-1, self.inp_caps * self.cap_sz), self.w2) + self.b2)
+        self_vectors = self.drop(self_vectors)
+        neighbor_vectors = self.drop(neighbor_vectors)
+
+        if hasattr(self, 'fc1'):
+            self_z = F.relu(self.fc1(self_vectors.reshape(-1, self.inp_caps * self.cap_sz)))
+            neighbor_z = F.relu(self.fc1(neighbor_vectors.reshape(-1, self.inp_caps * self.cap_sz)))
+        elif hasattr(self, 'fc2'):
+            self_z = F.relu(self.fc2(self_vectors.reshape(-1, self.inp_caps * self.cap_sz)))
+            neighbor_z = F.relu(self.fc2(neighbor_vectors.reshape(-1, self.inp_caps * self.cap_sz)))
         else:
             self_z = self_vectors.reshape(-1, self.d)
             neighbor_z = neighbor_vectors.reshape(-1, self.d)
