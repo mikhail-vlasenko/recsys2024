@@ -31,6 +31,7 @@ def train_model(args, model, train_data, eval_data, test_data, train_user_news, 
         # torch.tensor(train_user_news, dtype=torch.long),
         # torch.tensor(train_news_user, dtype=torch.long)
     )
+    
     # train_dataset = Subset(train_dataset, indices=range(len(train_dataset) // 10))
 
     #what are these indices exactly??

@@ -77,15 +77,22 @@ class EbnerdDataset(Dataset):
         """
         TODO: im really confused and idk if this is the best way to do things, but its something I can test atleast 
         """
-        row = self.df_behaviors.row(idx)
-        # get the following elements from the datarow, for user_indices, news_indices, labels in tqdm(train_loader):
-       
-        return row
+        
+        row = self.df_behaviors.slice(idx, 1)
+
+        # Get the required columns and convert them to numpy arrays if needed
+        user_id = row['user_id']
+        article_ids_clicked = row['article_ids_clicked'][-1] #idk if this can return more than one element. If so idk how to deal with it. 
+        labels = row['labels'][-1]
+
+        # Return the tuple
+        return (user_id, article_ids_clicked), labels
     
     def get_n_users(self) -> int:
         return len(self.df_behaviors[DEFAULT_USER_COL].unique())
     
     def get_word_ids(self, max_title_length) -> Tensor:
+
         print("getting word ids")
         #intialize the tokenizer
         TRANSFORMER_MODEL_NAME = "FacebookAI/xlm-roberta-base"
@@ -101,7 +108,7 @@ class EbnerdDataset(Dataset):
 
         #encode the enities
         entities_list = self.article_df[DEFAULT_ENTITIES_COL].to_list()
-        placeholder = ['[UNK]']  # Use an appropriate placeholder
+        placeholder = ['[UNK]']  
         prepared_entities = [ent if ent else placeholder for ent in entities_list]
         print(prepared_entities)
         encoding = transformer_tokenizer(prepared_entities, return_tensors='pt', padding='longest', truncation=True, is_split_into_words =True)
@@ -112,7 +119,11 @@ class EbnerdDataset(Dataset):
         ner_dict = self.build_dictionary(ner_list)
         ner_word_ids = self.tokenize_texts(ner_list, ner_dict, max_title_length)
 
-        return title_word_ids, entities_word_ids, ner_word_ids
+        #create index mapping 
+        id_list = self.article_df['article_id'].to_list()
+        id_to_index = {id: i for i, id in enumerate(id_list)}	
+
+        return title_word_ids, entities_word_ids, ner_word_ids, id_to_index
     
     def build_dictionary(self, texts):
         unique_words = set()
