@@ -24,12 +24,12 @@ def main():
     data_download_path = EbnerdVariants.init_variant(args.ebnerd_variant).value.path
 
     datamodule = OriginalModelDatamodule(data_download_path=data_download_path, batch_size=args.batch_size, num_workers=args.num_workers, api_key=args.api_key)
+
     datamodule.setup()
     news_title, news_entity, news_group = datamodule.data_train.get_word_ids(max_title_length=args.title_len)
     n_users = datamodule.data_train.get_n_users()
     #datamodule.data_train.__getitem__()
     
-
     net = Model(args, torch.tensor(news_title), torch.tensor(news_entity), torch.tensor(news_group), n_users, len(news_title))
 
     module = OriginalModule(net, torch.optim.Adam, torch.optim.lr_scheduler.StepLR, compile=True)

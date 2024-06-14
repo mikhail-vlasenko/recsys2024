@@ -39,6 +39,16 @@ class OriginalModule(LightningModule):
         # so it's worth to make sure validation metrics don't store results from these checks
         pass
 
+    def compute_loss(self, scores, labels, user_embeddings, news_embeddings):
+        total_loss = self.criterion(scores, labels)
+
+        l2_loss = sum(torch.norm(param) for param in self.parameters())
+        infer_loss, ret_w = self.net.infer_loss(user_embeddings, news_embeddings)
+
+        loss = (1 - self.balance) * total_loss + self.balance * infer_loss + self.l2_weight * l2_loss
+
+        return loss
+
     def training_step(
         self, batch: Tuple[torch.Tensor, torch.Tensor], batch_idx: int
     ) -> torch.Tensor:
@@ -111,6 +121,7 @@ class OriginalModule(LightningModule):
 
         :param stage: Either `"fit"`, `"validate"`, `"test"`, or `"predict"`.
         """
+        
         if self.hparams.compile and stage == "fit":
             self.net = torch.compile(self.net)
 
