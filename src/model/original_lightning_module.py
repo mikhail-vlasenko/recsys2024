@@ -33,28 +33,11 @@ class OriginalModule(LightningModule):
         # loss function
         self.criterion = torch.nn.binary_cross_entropy_with_logits()
 
-
-    def forward(self, user_indices, news_indices, user_news, news_user, labels) -> torch.Tensor:
-
-        out = self.net(user_indices, news_indices, user_news, news_user, labels)
-        
-        return out
-
     def on_train_start(self) -> None:
         """Lightning hook that is called when training begins."""
         # by default lightning executes validation step sanity checks before training starts,
         # so it's worth to make sure validation metrics don't store results from these checks
         pass
-
-    def compute_loss(self, scores, labels, user_embeddings, news_embeddings):
-        total_loss = self.criterion(scores, labels)
-
-        l2_loss = sum(torch.norm(param) for param in self.parameters())
-        infer_loss, ret_w = self.net.infer_loss(user_embeddings, news_embeddings)
-
-        loss = (1 - self.balance) * total_loss + self.balance * infer_loss + self.l2_weight * l2_loss
-
-        return loss
 
     def training_step(
         self, batch: Tuple[torch.Tensor, torch.Tensor], batch_idx: int

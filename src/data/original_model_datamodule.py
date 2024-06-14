@@ -69,12 +69,12 @@ class OriginalModelDatamodule(LightningDataModule):
 
         :return: The validation dataloader.
         """
-        return NewsrecDataLoader(
+        return DataLoader(
             dataset=self.data_val,
             batch_size=self.batch_size_per_device,
             num_workers=self.hparams.num_workers,
             pin_memory=self.hparams.pin_memory,
-            shuffle=False,
+            shuffle=True,
         )
 
     def test_dataloader(self) -> DataLoader[Any]:
@@ -82,12 +82,12 @@ class OriginalModelDatamodule(LightningDataModule):
 
         :return: The test dataloader.
         """
-        return NewsrecDataLoader(
-            dataset=self.data_test,
+        return DataLoader(
+            dataset=self.data_val,
             batch_size=self.batch_size_per_device,
             num_workers=self.hparams.num_workers,
             pin_memory=self.hparams.pin_memory,
-            shuffle=False,
+            shuffle=True,
         )
 
 
