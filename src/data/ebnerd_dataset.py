@@ -158,6 +158,8 @@ class EbnerdDataset(Dataset):
 
 
         #this one should be a list of lists, so convert it and create an id_to_index mapping 
+        '''
+        
         print(user_news_df)
         print(user_news_dict)
         max_news_id = np.max([int(i) for i in user_news_dict.keys()])
@@ -168,8 +170,9 @@ class EbnerdDataset(Dataset):
             else:
                 temp_user_news.append([])
         user_news_list = temp_user_news
+        '''
 
-        return user_news_list, news_user_dict
+        return user_news_dict, news_user_dict
     
     def preprocess_articles(self, df_articles: pl.DataFrame) -> pl.DataFrame:
         TRANSFORMER_MODEL_NAME = "FacebookAI/xlm-roberta-base"
