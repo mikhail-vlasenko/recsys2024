@@ -11,7 +11,7 @@ def get_training_args():
         default=EbnerdVariants.get_default_variant(),
     )
 
-    parser.add_argument("--num_workers", type=int, default=2)
+    parser.add_argument("--num_workers", type=int, default=0)
 
     #hugging face
     parser.add_argument("--api_key", type=str, default=None, help="Hugging Face API key")

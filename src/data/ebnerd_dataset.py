@@ -3,6 +3,8 @@ import zipfile
 from pathlib import Path
 import logging
 from typing import Optional
+
+from polars import DataFrame
 from tqdm import tqdm
 
 import torch
@@ -56,12 +58,15 @@ class EbnerdDataset(Dataset):
     def __init__(self, root_dir, data_split, mode = "train", history_size = 30, fraction = 0.1):
         super().__init__()
 
+        self.df_behaviors: DataFrame
         self.df_behaviors, self.df_history, articles = self.ebnerd_from_path(path=root_dir, history_size=history_size, mode=mode, data_split=data_split, fraction=fraction)
 
         self.unknown_representation = "zeros"
         self.article_df = articles
         if mode != "test":
             self.id_to_index = self.get_id_to_index()
+
+        self.compress_user_ids()
 
         #preprocess the articles into embedding vectors
         #self.embedded_articles, self.article_mapping = self.preprocess_articles(articles)
@@ -75,9 +80,6 @@ class EbnerdDataset(Dataset):
         return len(self.df_behaviors)
     
     def __getitem__(self, idx) -> tuple[tuple[np.ndarray], np.ndarray]:
-        """
-        """
-        
         row = self.df_behaviors.slice(idx, 1)
 
         # Get the required columns and convert them to numpy arrays if needed
@@ -89,8 +91,19 @@ class EbnerdDataset(Dataset):
         #print(article_ids_clicked)
         return user_id, self.id_to_index[article_ids_clicked], labels
     
+    def compress_user_ids(self):
+        # Get the unique user ids
+        unique_user_ids = self.df_behaviors[DEFAULT_USER_COL].unique().to_numpy()
+        # Create a mapping from user id to index
+        user_id_to_index = {user_id: index for index, user_id in enumerate(unique_user_ids)}
+        # Replace the user ids with the index
+        self.df_behaviors = self.df_behaviors.with_columns(
+            pl.col(DEFAULT_USER_COL).apply(lambda user_id: user_id_to_index[user_id]).alias(DEFAULT_USER_COL)
+        )
+
     def get_n_users(self) -> int:
-        return len(self.df_behaviors[DEFAULT_USER_COL].unique())
+        assert max(self.df_behaviors[DEFAULT_USER_COL]) + 1 == len(self.df_behaviors[DEFAULT_USER_COL].unique()), "User ids are not continuous"
+        return max(self.df_behaviors[DEFAULT_USER_COL])
     
     def get_id_to_index(self):
         #create index mapping 
@@ -108,7 +121,7 @@ class EbnerdDataset(Dataset):
 
         #encode the titles 
         titles_list= self.article_df[DEFAULT_TITLE_COL].to_list()
-        print(titles_list)
+        # print(titles_list)
         encoding = transformer_tokenizer(titles_list, return_tensors='pt', padding='max_length', max_length=max_title_length, truncation=True)
         title_word_ids = encoding['input_ids']
 
@@ -116,7 +129,7 @@ class EbnerdDataset(Dataset):
         entities_list = self.article_df[DEFAULT_ENTITIES_COL].to_list()
         placeholder = ['[UNK]']  
         prepared_entities = [ent if ent else placeholder for ent in entities_list]
-        print(prepared_entities)
+        # print(prepared_entities)
         encoding = transformer_tokenizer(prepared_entities, return_tensors='pt', padding='longest', truncation=True, is_split_into_words =True, max_length=max_entity_length)
         entities_word_ids = encoding['input_ids']
 

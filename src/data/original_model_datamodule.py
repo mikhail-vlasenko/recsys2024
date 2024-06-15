@@ -49,7 +49,7 @@ class OriginalModelDatamodule(LightningDataModule):
         if not self.data_train and not self.data_val and not self.data_test:
             self.data_train: Optional[EbnerdDataset] = EbnerdDataset(root_dir=self.hparams.root_dir, data_split=self.data_split, mode="train")
             self.data_val: Optional[EbnerdDataset] = EbnerdDataset(root_dir=self.hparams.root_dir, data_split=self.data_split, mode="validation")
-            self.data_test: Optional[EbnerdDataset] = EbnerdDataset(root_dir=self.hparams.root_dir, data_split=self.data_split, mode="test")
+            # self.data_test: Optional[EbnerdDataset] = EbnerdDataset(root_dir=self.hparams.root_dir, data_split=self.data_split, mode="test")
 
     def train_dataloader(self) -> DataLoader[Any]:
         """Create and return the train dataloader.

@@ -42,7 +42,7 @@ class OriginalModule(LightningModule):
         self.criterion = F.binary_cross_entropy_with_logits
 
         if not args.optimized_subsampling:
-            print(args.optimized_subsampling)
+            print("args.optimized_subsampling:", args.optimized_subsampling)
             self.pre_load_neighbors()
 
         self.net = self.net.to(self.device)
