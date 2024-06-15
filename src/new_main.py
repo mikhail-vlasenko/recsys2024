@@ -15,6 +15,9 @@ from src.model.original_lightning_module import OriginalModule
 from src.model.components.model import Model
 from transformers import BertTokenizer, BertModel
 
+device_name = "cuda" if torch.cuda.is_available() else "cpu"
+device = torch.device(device_name)
+
 
 def main():
     args = get_training_args()
@@ -32,7 +35,7 @@ def main():
     train_user_news, train_news_user = datamodule.data_train.preprocess_neighbors()
     #datamodule.data_train.__getitem__()
     
-    net = Model(args, torch.tensor(news_title), torch.tensor(news_entity), torch.tensor(news_group), n_users, len(news_title))
+    net = Model(args, torch.tensor(news_title).to(device), torch.tensor(news_entity).to(device), torch.tensor(news_group).to(device), n_users, len(news_title))
 
     module = OriginalModule(net, compile=True, args=args, train_user_news=train_user_news, train_news_user=train_news_user, n_news=n_news)
     checkpoint_filename = f"{args.ebnerd_variant}-original-model"
@@ -44,7 +47,7 @@ def main():
     )
 
     wandb_logger = WandbLogger(
-        entity="inverse-rl", project="RecSys", name=checkpoint_filename
+        entity="inverse_rl", project="RecSys", name=checkpoint_filename
     )
 
     wandb_logger.watch(module, log="all")
@@ -55,7 +58,7 @@ def main():
         "callbacks": callbacks,
         "enable_checkpointing": True,
         "logger": wandb_logger,
-        "accelerator": "gpu" if torch.cuda.is_available() else "cpu",
+        "accelerator": device_name,
         "devices": "auto"
     }
 
