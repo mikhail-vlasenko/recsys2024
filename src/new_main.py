@@ -26,7 +26,7 @@ def main():
     datamodule = OriginalModelDatamodule(data_download_path=data_download_path, batch_size=args.batch_size, num_workers=args.num_workers, api_key=args.api_key)
 
     datamodule.setup()
-    news_title, news_entity, news_group, id_to_index = datamodule.data_train.get_word_ids(max_title_length=args.title_len)
+    news_title, news_entity, news_group = datamodule.data_train.get_word_ids(max_title_length=args.title_len)
     n_users = datamodule.data_train.get_n_users()
     n_news = len(news_title)
     train_user_news, train_news_user = datamodule.data_train.preprocess_neighbors()
