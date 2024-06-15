@@ -60,8 +60,8 @@ class EbnerdDataset(Dataset):
 
         self.unknown_representation = "zeros"
         self.article_df = articles
-
-        self.id_to_index = self.get_id_to_index()
+        if mode != "test":
+            self.id_to_index = self.get_id_to_index()
 
         #preprocess the articles into embedding vectors
         #self.embedded_articles, self.article_mapping = self.preprocess_articles(articles)
