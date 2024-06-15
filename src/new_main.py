@@ -34,7 +34,7 @@ def main():
     
     net = Model(args, torch.tensor(news_title), torch.tensor(news_entity), torch.tensor(news_group), n_users, len(news_title))
 
-    module = OriginalModule(net, torch.optim.Adam, torch.optim.lr_scheduler.StepLR, compile=True, args=args, train_user_news=train_user_news, train_news_user=train_news_user, n_news=n_news, id_to_index=id_to_index)
+    module = OriginalModule(net, compile=True, args=args, train_user_news=train_user_news, train_news_user=train_news_user, n_news=n_news, id_to_index=id_to_index)
     checkpoint_filename = f"{args.ebnerd_variant}-original-model"
     checkpoint_callback = ModelCheckpoint(
         dirpath="checkpoints/",
@@ -52,11 +52,9 @@ def main():
     callbacks = [checkpoint_callback]
 
     trainer_args = {
-        "max_time": {"hours": int(args.max_hours_per_run) - 1},
-        "max_epochs": args.n_epochs_per_cycle,
         "callbacks": callbacks,
         "enable_checkpointing": True,
-        "logger": wandb_logger if args.logger and not args.test_mode else None,
+        "logger": wandb_logger,
         "accelerator": "gpu" if torch.cuda.is_available() else "cpu",
         "devices": "auto"
     }

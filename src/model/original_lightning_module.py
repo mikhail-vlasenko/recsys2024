@@ -14,8 +14,6 @@ class OriginalModule(LightningModule):
     def __init__(
         self,
         net: torch.nn.Module,
-        optimizer: torch.optim.Optimizer,
-        scheduler: torch.optim.lr_scheduler,
         compile: bool,
         train_user_news,
         train_news_user,
@@ -191,16 +189,6 @@ class OriginalModule(LightningModule):
 
         :return: A dict containing the configured optimizers and learning-rate schedulers to be used for training.
         """
-        optimizer = self.hparams.optimizer(params=self.net.parameters())
-        if self.hparams.scheduler is not None:
-            scheduler = self.hparams.scheduler(optimizer=optimizer)
-            return {
-                "optimizer": optimizer,
-                "lr_scheduler": {
-                    "scheduler": scheduler,
-                    "monitor": "val/loss",
-                    "interval": "epoch",
-                    "frequency": 1,
-                },
-            }
+        optimizer = torch.optim.Adam(self.net.parameters(), lr=self.hparams.args.lr, 
+                                      weight_decay=self.hparams.args.l2_weight)
         return {"optimizer": optimizer}

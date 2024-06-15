@@ -80,11 +80,12 @@ class EbnerdDataset(Dataset):
         row = self.df_behaviors.slice(idx, 1)
 
         # Get the required columns and convert them to numpy arrays if needed
-        user_id = row['user_id']
-        article_ids_clicked = row['article_ids_clicked'][-1] #idk if this can return more than one element. If so idk how to deal with it. 
-        labels = row['labels'][-1]
+        user_id = row['user_id'][0]
+        article_ids_clicked = row['article_ids_clicked'][-1][0] #idk if this can return more than one element. If so idk how to deal with it. 
+        labels = row['labels'][0][-1]
 
         # Return the tuple
+        #print(article_ids_clicked)
         return user_id, article_ids_clicked, labels
     
     def get_n_users(self) -> int:
@@ -235,7 +236,7 @@ class EbnerdDataset(Dataset):
                 .pipe(create_binary_labels_column)
                 .sample(fraction=fraction)
             )
-        if mode == "test" or mode == "val":
+        if mode == "test" or mode == "validation":
             df_behaviors = (df_behaviors
                 .pipe(create_binary_labels_column)
                 .sample(fraction=fraction)
