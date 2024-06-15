@@ -61,6 +61,8 @@ class EbnerdDataset(Dataset):
         self.unknown_representation = "zeros"
         self.article_df = articles
 
+        self.id_to_index = self.get_id_to_index()
+
         #preprocess the articles into embedding vectors
         #self.embedded_articles, self.article_mapping = self.preprocess_articles(articles)
 
@@ -74,7 +76,6 @@ class EbnerdDataset(Dataset):
     
     def __getitem__(self, idx) -> tuple[tuple[np.ndarray], np.ndarray]:
         """
-        TODO: im really confused and idk if this is the best way to do things, but its something I can test atleast 
         """
         
         row = self.df_behaviors.slice(idx, 1)
@@ -90,6 +91,13 @@ class EbnerdDataset(Dataset):
     
     def get_n_users(self) -> int:
         return len(self.df_behaviors[DEFAULT_USER_COL].unique())
+    
+    def get_id_to_index(self):
+        #create index mapping 
+        id_list = self.article_df['article_id'].to_list()
+        id_to_index = {id: i for i, id in enumerate(id_list)}	
+        return id_to_index
+
     
     def get_word_ids(self, max_title_length) -> Tensor:
 
@@ -119,11 +127,7 @@ class EbnerdDataset(Dataset):
         ner_dict = self.build_dictionary(ner_list)
         ner_word_ids = self.tokenize_texts(ner_list, ner_dict, max_title_length)
 
-        #create index mapping 
-        id_list = self.article_df['article_id'].to_list()
-        self.id_to_index = {id: i for i, id in enumerate(id_list)}	
-
-        return title_word_ids, entities_word_ids, ner_word_ids, self.id_to_index
+        return title_word_ids, entities_word_ids, ner_word_ids
     
     def build_dictionary(self, texts):
         unique_words = set()
