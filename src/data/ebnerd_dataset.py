@@ -99,7 +99,7 @@ class EbnerdDataset(Dataset):
         return id_to_index
 
     
-    def get_word_ids(self, max_title_length) -> Tensor:
+    def get_word_ids(self, max_title_length, max_entity_length) -> Tensor:
 
         print("getting word ids")
         #intialize the tokenizer
@@ -119,7 +119,7 @@ class EbnerdDataset(Dataset):
         placeholder = ['[UNK]']  
         prepared_entities = [ent if ent else placeholder for ent in entities_list]
         print(prepared_entities)
-        encoding = transformer_tokenizer(prepared_entities, return_tensors='pt', padding='longest', truncation=True, is_split_into_words =True)
+        encoding = transformer_tokenizer(prepared_entities, return_tensors='pt', padding='longest', truncation=True, is_split_into_words =True, max_length=max_entity_length)
         entities_word_ids = encoding['input_ids']
 
         #encode the ner
@@ -127,7 +127,7 @@ class EbnerdDataset(Dataset):
         ner_dict = self.build_dictionary(ner_list)
         ner_word_ids = self.tokenize_texts(ner_list, ner_dict, max_title_length)
 
-        return title_word_ids, entities_word_ids, ner_word_ids
+        return title_word_ids[], entities_word_ids, ner_word_ids
     
     def build_dictionary(self, texts):
         unique_words = set()
