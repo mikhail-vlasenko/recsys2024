@@ -46,6 +46,7 @@ class OriginalModule(LightningModule):
             self.pre_load_neighbors()
 
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        self.net = self.net.to(self.device)
         
 
     def pre_load_neighbors(self):
@@ -89,8 +90,8 @@ class OriginalModule(LightningModule):
         else:
             user_news, news_user = optimized_random_neighbor(self.hparams.args, user_news, news_user, self.n_news, self.user_lengths, self.news_lengths)
 
-        user_news, news_user = torch.tensor(user_news, dtype=torch.long).to(user_id.device), torch.tensor(
-                news_user, dtype=torch.long).to(user_id.device)
+        user_news, news_user = torch.tensor(user_news, dtype=torch.long).to(self.device), torch.tensor(
+                news_user, dtype=torch.long).to(self.device)
         
         return user_id, article_index, user_news, news_user, labels
 
