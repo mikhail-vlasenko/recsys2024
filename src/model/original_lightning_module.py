@@ -80,6 +80,7 @@ class OriginalModule(LightningModule):
     def load_batch(self, batch, mode="train"):
         user_id, article_index, labels = batch
         
+        assert mode == "train"
         if mode == "train":
             user_news, news_user = self.train_user_news, self.train_news_user
 
@@ -137,12 +138,6 @@ class OriginalModule(LightningModule):
     def validation_step(
         self, batch: Tuple[torch.Tensor, torch.Tensor], batch_idx: int
     ) -> None:
-        """Perform a single validation step on a batch of data from the validation set.
-
-        :param batch: A batch of data (a tuple) containing the input tensor of images and target
-            labels.
-        :param batch_idx: The index of the current batch.
-        """
         user_indices, news_indices, user_news, news_user, labels = self.load_batch(batch)
 
         scores, user_embeddings, news_embeddings = self.net(user_indices, news_indices, user_news, news_user)

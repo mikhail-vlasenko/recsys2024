@@ -29,13 +29,32 @@ def main():
     datamodule = OriginalModelDatamodule(data_download_path=data_download_path, batch_size=args.batch_size, num_workers=args.num_workers, api_key=args.api_key)
 
     datamodule.setup()
-    news_title, news_entity, news_group = datamodule.data_train.get_word_ids(max_title_length=args.title_len,max_entity_length=40, max_group_length=40)
+    news_title, news_entity, news_group = datamodule.data_train.get_word_ids(
+        max_title_length=args.title_len, max_entity_length=40, max_group_length=40
+    )
+
+    # i dont know what "ner" is in the get_word_ids function,
+    # but the news_group are almost certainly the embedding table to go from a news id
+    # to a list of ids of a group for every entity in the article
+    # in the original code, there are very few groups, namely, 12
+
+    # i have no idea currently how to split our entities (which are all words i think) into proper groups
+    # so lets fill it with zeros for now
+    news_group = [[0] * len(news_entity[0]) for _ in range(len(news_entity))]
+
     n_users = datamodule.data_train.get_n_users()
     n_news = len(news_title)
     train_user_news, train_news_user = datamodule.data_train.preprocess_neighbors()
     #datamodule.data_train.__getitem__()
     
-    net = Model(args, torch.tensor(news_title).to(device), torch.tensor(news_entity).to(device), torch.tensor(news_group).to(device), n_users, len(news_title))
+    net = Model(
+        args,
+        torch.tensor(news_title).to(device),
+        torch.tensor(news_entity).to(device),
+        torch.tensor(news_group).to(device),
+        n_users,
+        len(news_title)
+    )
 
     module = OriginalModule(net, compile=True, args=args, train_user_news=train_user_news, train_news_user=train_news_user, n_news=n_news)
     checkpoint_filename = f"{args.ebnerd_variant}-original-model"

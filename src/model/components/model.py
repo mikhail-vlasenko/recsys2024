@@ -216,6 +216,7 @@ class Model(nn.Module):
         return news, user
 
     def convolution(self, inputs):
+        # convolution is only done on news nodes
         title_lookup = F.embedding(inputs, self.title).reshape(-1, self.title_len)
         title_embed = self.word_emb_matrix(title_lookup).unsqueeze(-1)
 

@@ -98,9 +98,7 @@ class EbnerdDataset(Dataset):
         id_to_index = {id: i for i, id in enumerate(id_list)}	
         return id_to_index
 
-    
     def get_word_ids(self, max_title_length, max_entity_length, max_group_length) -> Tensor:
-
         print("getting word ids")
         #intialize the tokenizer
         TRANSFORMER_MODEL_NAME = "FacebookAI/xlm-roberta-base"
@@ -123,6 +121,7 @@ class EbnerdDataset(Dataset):
         entities_word_ids = encoding['input_ids']
 
         #encode the ner
+        # todo: whats ner?
         ner_list = self.article_df[DEFAULT_NER_COL].to_list()
         ner_dict = self.build_dictionary(ner_list)
         ner_word_ids = self.tokenize_texts(ner_list, ner_dict, max_group_length)
