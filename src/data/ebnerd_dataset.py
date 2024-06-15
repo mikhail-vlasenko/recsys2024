@@ -127,7 +127,7 @@ class EbnerdDataset(Dataset):
         ner_dict = self.build_dictionary(ner_list)
         ner_word_ids = self.tokenize_texts(ner_list, ner_dict, max_title_length)
 
-        return title_word_ids[], entities_word_ids, ner_word_ids
+        return title_word_ids, entities_word_ids, ner_word_ids
     
     def build_dictionary(self, texts):
         unique_words = set()
