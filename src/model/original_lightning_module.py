@@ -44,6 +44,8 @@ class OriginalModule(LightningModule):
         if not args.optimized_subsampling:
             print(args.optimized_subsampling)
             self.pre_load_neighbors()
+
+        self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         
 
     def pre_load_neighbors(self):
