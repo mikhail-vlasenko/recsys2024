@@ -18,7 +18,6 @@ class OriginalModule(LightningModule):
         train_user_news,
         train_news_user,
         n_news,
-        id_to_index,
         args: bool
     ) -> None:
         """Initialize a `pl_classifier`.
