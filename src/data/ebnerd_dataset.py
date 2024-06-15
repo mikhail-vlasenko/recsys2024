@@ -144,13 +144,17 @@ class EbnerdDataset(Dataset):
     
     def preprocess_neighbors(self):
         #Built a dictionary where for each article we have each user who clicked on it
-        news_user_dict = self.df_history.groupby(DEFAULT_HISTORY_ARTICLE_ID_COL).agg(pl.col(DEFAULT_USER_COL).list()).to_dict()
+        news_user_df = self.df_history.groupby(DEFAULT_HISTORY_ARTICLE_ID_COL).agg(pl.col(DEFAULT_USER_COL)).collect()
+        news_user_dict = {row[0]: row[1] for row in news_user_df.rows()}
 
         #Built a dictionary where for each user we have each article they clicked on
-        user_news_dict = self.df_history.groupby(DEFAULT_USER_COL).agg(pl.col(DEFAULT_HISTORY_ARTICLE_ID_COL).list()).to_dict()
+        user_news_df = self.df_history.groupby(DEFAULT_USER_COL).agg(pl.col(DEFAULT_HISTORY_ARTICLE_ID_COL)).collect()
+        user_news_dict = {row[0]: row[1] for row in user_news_df.rows()}
 
         #this one should be a list of lists, so convert it and create an id_to_index mapping 
-        max_news_id = np.max(user_news_dict.keys())
+        print(news_user_dict)
+        print([i for i in user_news_dict.keys()])
+        max_news_id = np.max([int(i) for i in user_news_dict.keys()])
         temp_user_news = []
         for i in range(max_news_id):
             if i in user_news_dict:
