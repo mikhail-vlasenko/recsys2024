@@ -1,12 +1,13 @@
 from typing import Any, Dict, Tuple
 
 import torch
+import torch.nn.functional as F
 from lightning import LightningModule
 from torchmetrics import MinMetric, MeanMetric
 from src.model.components.model import Model as Net
 from src.data.data_loader import random_neighbor, optimized_random_neighbor
 import logging
-import tqdm
+from tqdm import tqdm
 
 
 class OriginalModule(LightningModule):
@@ -42,9 +43,10 @@ class OriginalModule(LightningModule):
         self.net = net
 
         # loss function
-        self.criterion = torch.nn.binary_cross_entropy_with_logits()
+        self.criterion = F.binary_cross_entropy_with_logits
 
-        if args.optimized_subsampling:
+        if not args.optimized_subsampling:
+            print(args.optimized_subsampling)
             self.pre_load_neighbors()
         
 
@@ -52,13 +54,13 @@ class OriginalModule(LightningModule):
         max_news_id = self.n_news
         temp_train_news_user = []
         for i in range(max_news_id):
-            if i in train_news_user:
+            if i in self.train_news_user:
                 temp_train_news_user.append(train_news_user[i])
             else:
                 temp_train_news_user.append([])
         train_news_user = temp_train_news_user
         user_lengths = torch.tensor([len(self.train_user_news[i]) for i in range(len(self.train_user_news))]).unsqueeze(1)#.to(device)
-        news_lengths = torch.tensor([len(self.train_news_user[i]) for i in range(len(self.train_news_user))]).unsqueeze(1)#.to(device)
+        news_lengths = torch.tensor([len(train_news_user[i]) for i in range(len(train_news_user))]).unsqueeze(1)#.to(device)
 
         def list_of_lists_to_torch(lst, pad_value, max_len, device):
             tensors = []
