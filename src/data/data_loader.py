@@ -52,7 +52,8 @@ def random_neighbor(args, input_user_news, input_news_user, news_len):
             sampled_indices = np.random.choice(list(range(n_neighbors)), size=args.news_neighbor, replace=True)
         user_news[int(i)] = np.array([input_user_news[i][k] for k in sampled_indices])
 
-    news_user = np.zeros([news_len, args.user_neighbor], dtype=np.int32)
+    max_user_id = np.max([int(i) for i in input_news_user.keys()])
+    news_user = np.zeros([max_user_id, args.user_neighbor], dtype=np.int32)
     for i in input_news_user:
         n_neighbors = len(input_news_user[i])
         if n_neighbors >= args.user_neighbor:
