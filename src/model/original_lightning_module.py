@@ -76,9 +76,7 @@ class OriginalModule(LightningModule):
 
 
     def load_batch(self, batch, mode="train"):
-        user_id, article_id, labels = batch
-
-        article_index = self.id_to_index[article_id].to(article_id.device)
+        user_id, article_index, labels = batch
         
         if mode == "train":
             user_news, news_user = self.train_user_news, self.train_news_user

@@ -86,7 +86,7 @@ class EbnerdDataset(Dataset):
 
         # Return the tuple
         #print(article_ids_clicked)
-        return user_id, article_ids_clicked, labels
+        return user_id, self.id_to_index[article_ids_clicked], labels
     
     def get_n_users(self) -> int:
         return len(self.df_behaviors[DEFAULT_USER_COL].unique())
@@ -121,9 +121,9 @@ class EbnerdDataset(Dataset):
 
         #create index mapping 
         id_list = self.article_df['article_id'].to_list()
-        id_to_index = {id: i for i, id in enumerate(id_list)}	
+        self.id_to_index = {id: i for i, id in enumerate(id_list)}	
 
-        return title_word_ids, entities_word_ids, ner_word_ids, id_to_index
+        return title_word_ids, entities_word_ids, ner_word_ids, self.id_to_index
     
     def build_dictionary(self, texts):
         unique_words = set()
