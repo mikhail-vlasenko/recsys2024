@@ -31,9 +31,14 @@ def train_model(args, model, train_data, eval_data, test_data, train_user_news, 
         # torch.tensor(train_user_news, dtype=torch.long),
         # torch.tensor(train_news_user, dtype=torch.long)
     )
-    # train_dataset = Subset(train_dataset, indices=range(len(train_dataset) // 10))
+    train_dataset = Subset(train_dataset, indices=range(len(train_dataset) // 10))
 
     train_loader = DataLoader(train_dataset, batch_size=args.batch_size, shuffle=True)
+
+    # make a set-based index for edges
+    user_edge_index: list[set] = []
+    for i in range(len(train_user_news)):
+        user_edge_index.append(set(train_user_news[i]))
 
     if args.optimized_subsampling:
         # dict to list
@@ -95,11 +100,27 @@ def train_model(args, model, train_data, eval_data, test_data, train_user_news, 
                 user_indices, news_indices, user_news, news_user
             )
 
-            scores = model.get_edge_probability(user_embeddings, news_embeddings)
+            user_projected, news_projected = model.apply_projection(user_embeddings, news_embeddings)
+
+            if args.more_labels:
+                # get label matrix using a list of sets for each user
+                labels = torch.empty([len(user_indices), len(user_indices)], dtype=torch.float32)
+                for i in range(len(user_indices)):
+                    for j in range(len(news_indices)):
+                        labels[i, j] = 1 if j in user_edge_index[i] else 0
+                labels = labels.flatten().to(device)
+
+                # matmul to get a matrix of similarities
+                scores = torch.matmul(user_projected, news_projected.T)
+                scores = scores.flatten()
+            else:
+                scores = model.get_edge_probability(user_projected, news_projected)
 
             total_loss = criterion(scores, labels)
             infer_loss = model.infer_loss(user_embeddings, news_embeddings)
             loss = (1 - args.balance) * total_loss + args.balance * infer_loss
+            # todo: i wanna see how infer_loss changes depending on the balance.
+            #   it might be that the model can minimize infer_loss "for free"
 
             loss.backward()
             optimizer.step()
@@ -128,3 +149,14 @@ def train_model(args, model, train_data, eval_data, test_data, train_user_news, 
         #     f"Epoch {epoch + 1}/{args.n_epochs}, Eval Loss: {eval_loss / len(eval_loader)}, Eval AUC: {eval_auc}, Eval F1: {eval_f1}")
 
     return model
+
+
+"""
+baseline (varies a bit from run to run):
+
+the loss is decreasing during training (on 1/10th of data):
+Epoch 1/10, Loss: 0.004795841872692108
+Epoch 2/10, Loss: 0.002587323309853673
+Epoch 3/10, Loss: 0.0015032864175736904
+Epoch 4/10, Loss: 0.0013008419191464782
+"""

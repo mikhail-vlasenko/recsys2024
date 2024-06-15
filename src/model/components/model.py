@@ -88,17 +88,16 @@ class Model(nn.Module):
         return user_embeddings, news_embeddings
 
     def get_edge_probability(self, user_embeddings, news_embeddings):
-        scores = torch.squeeze(self.simple_dot_net(user_embeddings, news_embeddings))
+        scores = torch.squeeze(torch.sum(user_embeddings * news_embeddings, dim=-1))
         return scores
 
-    def simple_dot_net(self, x, y):
+    def apply_projection(self, x, y):
         x_map = self.last_linear(x.reshape(self.batch_size, -1))
         y_map = self.last_linear(y.reshape(self.batch_size, -1))
-
-        output = torch.sum(x_map * y_map, dim=-1)
-        return output
+        return x_map, y_map
 
     def infer_loss(self, x, y):
+        # implements equation 8
         x_class = self.ret_linear(x.reshape(-1, self.nhidden))
         y_class = self.ret_linear(y.reshape(-1, self.nhidden))
 
