@@ -19,6 +19,7 @@ class OriginalModule(LightningModule):
         train_user_news,
         train_news_user,
         n_news,
+        id_to_index,
         args: bool
     ) -> None:
         """Initialize a `pl_classifier`.
@@ -36,6 +37,7 @@ class OriginalModule(LightningModule):
         self.train_news_user = train_news_user
         self.train_user_news = train_user_news
         self.n_news = n_news
+        self.id_to_index = id_to_index
 
         self.net = net
 
@@ -47,7 +49,7 @@ class OriginalModule(LightningModule):
         
 
     def pre_load_neighbors(self):
-        max_news_id = n_news
+        max_news_id = self.n_news
         temp_train_news_user = []
         for i in range(max_news_id):
             if i in train_news_user:
@@ -73,15 +75,18 @@ class OriginalModule(LightningModule):
         self.train_news_user = list_of_lists_to_torch(self.train_news_user, 0, news_lengths.max().item(), dense_matrix_device)
 
 
-    def load_batch(self, batch):
-        if self.hparams.optimized_subsampling:
-                user_news, news_user = optimized_random_neighbor(args, train_user_news, train_news_user,
-                                                                 user_lengths, news_lengths)
-        else:
-            user_news, news_user = random_neighbor(args, train_user_news, train_news_user, len(news_title))
+    def load_batch(self, batch, mode="train"):
+        user_id, article_id, labels = batch
 
-        user_news, news_user = torch.tensor(user_news, dtype=torch.long), torch.tensor(
-            news_user, dtype=torch.long)
+        article_index = self.id_to_index[article_id].to(article_id.device)
+        
+        if mode == "train":
+            user_news, news_user = self.train_user_news, self.train_news_user
+        
+        user_news, news_user = torch.tensor(user_news, dtype=torch.long).to(user_id.device), torch.tensor(
+                news_user, dtype=torch.long).to(user_id.device)
+        
+        return user_id, article_index, user_news, news_user, labels
 
     def on_train_start(self) -> None:
         """Lightning hook that is called when training begins."""
@@ -109,8 +114,8 @@ class OriginalModule(LightningModule):
         :param batch_idx: The index of the current batch.
         :return: A tensor of losses between model predictions and targets.
         """
-        print(batch)
-        user_indices, news_indices, user_news, news_user, labels = batch
+        
+        user_indices, news_indices, user_news, news_user, labels = self.load_batch(batch)
 
         scores, user_embeddings, news_embeddings = self.net(user_indices, news_indices, user_news, news_user, labels)
 
@@ -132,7 +137,7 @@ class OriginalModule(LightningModule):
             labels.
         :param batch_idx: The index of the current batch.
         """
-        user_indices, news_indices, user_news, news_user, labels = batch
+        user_indices, news_indices, user_news, news_user, labels = self.load_batch(batch)
 
         scores, user_embeddings, news_embeddings = self.net(user_indices, news_indices, user_news, news_user, labels)
 
@@ -151,7 +156,7 @@ class OriginalModule(LightningModule):
             labels.
         :param batch_idx: The index of the current batch.
         """
-        user_indices, news_indices, user_news, news_user, labels = batch
+        user_indices, news_indices, user_news, news_user, labels = self.load_batch(batch)
 
         scores, user_embeddings, news_embeddings = self.net(user_indices, news_indices, user_news, news_user, labels)
 

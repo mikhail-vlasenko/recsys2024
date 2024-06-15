@@ -85,7 +85,7 @@ class EbnerdDataset(Dataset):
         labels = row['labels'][-1]
 
         # Return the tuple
-        return (user_id, article_ids_clicked), labels
+        return user_id, article_ids_clicked, labels
     
     def get_n_users(self) -> int:
         return len(self.df_behaviors[DEFAULT_USER_COL].unique())

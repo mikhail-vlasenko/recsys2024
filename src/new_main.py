@@ -26,7 +26,7 @@ def main():
     datamodule = OriginalModelDatamodule(data_download_path=data_download_path, batch_size=args.batch_size, num_workers=args.num_workers, api_key=args.api_key)
 
     datamodule.setup()
-    news_title, news_entity, news_group = datamodule.data_train.get_word_ids(max_title_length=args.title_len)
+    news_title, news_entity, news_group, id_to_index = datamodule.data_train.get_word_ids(max_title_length=args.title_len)
     n_users = datamodule.data_train.get_n_users()
     n_news = len(news_title)
     train_user_news, train_news_user = datamodule.data_train.preprocess_neighbors()
@@ -34,7 +34,7 @@ def main():
     
     net = Model(args, torch.tensor(news_title), torch.tensor(news_entity), torch.tensor(news_group), n_users, len(news_title))
 
-    module = OriginalModule(net, torch.optim.Adam, torch.optim.lr_scheduler.StepLR, compile=True, args=args, train_user_news=train_user_news, train_news_user=train_news_user, n_news=n_news)
+    module = OriginalModule(net, torch.optim.Adam, torch.optim.lr_scheduler.StepLR, compile=True, args=args, train_user_news=train_user_news, train_news_user=train_news_user, n_news=n_news, id_to_index=id_to_index)
     checkpoint_filename = f"{args.ebnerd_variant}-original-model"
     checkpoint_callback = ModelCheckpoint(
         dirpath="checkpoints/",
