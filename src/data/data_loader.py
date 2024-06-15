@@ -42,7 +42,8 @@ def load_new_data(args):
 
 
 def random_neighbor(args, input_user_news, input_news_user, news_len):
-    user_news = np.zeros([len(input_user_news.keys()), args.news_neighbor], dtype=np.int32)
+    max_news_id = np.max([int(i) for i in input_news_user.keys()])
+    user_news = np.zeros([max_news_id, args.news_neighbor], dtype=np.int32)
     for i in input_user_news:
         n_neighbors = len(input_user_news[i])
         if n_neighbors >= args.news_neighbor:
