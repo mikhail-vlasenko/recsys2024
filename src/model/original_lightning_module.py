@@ -78,6 +78,12 @@ class OriginalModule(LightningModule):
         
         if mode == "train":
             user_news, news_user = self.train_user_news, self.train_news_user
+
+        #this if statement is the wrong way arround because for some reason that arg is broken 
+        if self.hparams.args.optimized_subsampling:
+            user_news, news_user = random_neighbor(user_id, article_index, self.n_news, self.train_user_news, self.train_news_user)
+        else:
+            user_news, news_user = optimized_random_neighbor(user_id, article_index, self.train_user_news, self.train_news_user, user_lengths, news_lengths)
         
         user_news, news_user = torch.tensor(user_news, dtype=torch.long).to(user_id.device), torch.tensor(
                 news_user, dtype=torch.long).to(user_id.device)
