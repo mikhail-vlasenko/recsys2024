@@ -2,7 +2,7 @@ from typing import Any, Dict, Tuple
 
 import torch
 from lightning import LightningModule
-from torchmetrics import MinMetric, MeanMetric
+from torchmetrics import MinMetric, MeanMetric, RetrievalNormalizedDCG
 from src.model.components.model import Model as Net
 import logging
 
@@ -31,7 +31,11 @@ class OriginalModule(LightningModule):
         self.net = net
 
         # loss function
-        self.criterion = torch.nn.binary_cross_entropy_with_logits()
+        self.criterion = torch.nn.BCEWithLogitsLoss()
+
+        # IR metrics
+        self.val_ndcg = RetrievalNormalizedDCG()
+        self.test_ndcg = RetrievalNormalizedDCG()
 
 
     def forward(self, user_indices, news_indices, user_news, news_user, labels) -> torch.Tensor:
@@ -95,7 +99,12 @@ class OriginalModule(LightningModule):
 
         loss = self.compute_loss(scores, labels, user_embeddings, news_embeddings)
 
+        self.val_ndcg(scores, labels)
+        ndcg = self.val_ndcg.compute()
+
         self.log("val/loss", loss, on_step=True, on_epoch=True, prog_bar=True, logger=True)
+        self.log("val/ndcg", ndcg, on_step=True, on_epoch=True, prog_bar=True, logger=True)
+
 
         return loss
 
@@ -114,8 +123,11 @@ class OriginalModule(LightningModule):
 
         loss = self.compute_loss(scores, labels, user_embeddings, news_embeddings)
 
-        self.log("test/loss", loss, on_step=True, on_epoch=True, prog_bar=True, logger=True)
+        self.test_ndcg(scores, labels)
+        ndcg = self.test_ndcg.compute()
 
+        self.log("test/loss", loss, on_step=True, on_epoch=True, prog_bar=True, logger=True)
+        self.log("test/ndcg", ndcg, on_step=True, on_epoch=True, prog_bar=True, logger=True)
 
         return loss
 
