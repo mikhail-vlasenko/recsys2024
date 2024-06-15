@@ -2,7 +2,7 @@ from typing import Any, Dict, Tuple
 
 import torch
 from lightning import LightningModule
-from torchmetrics import MinMetric, MeanMetric, RetrievalNormalizedDCG
+from torchmetrics import MinMetric, MeanMetric, classification
 from src.model.components.model import Model as Net
 import logging
 
@@ -33,9 +33,13 @@ class OriginalModule(LightningModule):
         # loss function
         self.criterion = torch.nn.BCEWithLogitsLoss()
 
-        # IR metrics
-        self.val_ndcg = RetrievalNormalizedDCG()
-        self.test_ndcg = RetrievalNormalizedDCG()
+        # validation metrics
+        self.val_f1 = classification.BinaryF1Score()
+        self.val_roc_auc = classification.BinaryAUROC()
+
+        # test metrics
+        self.test_f1 = classification.BinaryF1Score()
+        self.test_roc_auc = classification.BinaryAUROC()
 
 
     def forward(self, user_indices, news_indices, user_news, news_user, labels) -> torch.Tensor:
@@ -99,14 +103,15 @@ class OriginalModule(LightningModule):
 
         loss = self.compute_loss(scores, labels, user_embeddings, news_embeddings)
 
-        self.val_ndcg(scores, labels)
-        ndcg = self.val_ndcg.compute()
+        f1 = self.val_f1(scores, labels).compute()
+
+        roc_auc = self.val_roc_auc(scores, labels).compute()
 
         self.log("val/loss", loss, on_step=True, on_epoch=True, prog_bar=True, logger=True)
-        self.log("val/ndcg", ndcg, on_step=True, on_epoch=True, prog_bar=True, logger=True)
+        self.log("val/f1", f1, on_step=True, on_epoch=True, prog_bar=True, logger=True)
+        self.log("val/roc_auc", roc_auc, on_step=True, on_epoch=True, prog_bar=True, logger=True)
 
-
-        return loss
+        return loss, f1, roc_auc
 
     def test_step(
         self, batch: Tuple[torch.Tensor, torch.Tensor], batch_idx: int
@@ -123,13 +128,15 @@ class OriginalModule(LightningModule):
 
         loss = self.compute_loss(scores, labels, user_embeddings, news_embeddings)
 
-        self.test_ndcg(scores, labels)
-        ndcg = self.test_ndcg.compute()
+        f1 = self.test_f1(scores, labels).compute()
+
+        roc_auc = self.test_roc_auc(scores, labels).compute()
 
         self.log("test/loss", loss, on_step=True, on_epoch=True, prog_bar=True, logger=True)
-        self.log("test/ndcg", ndcg, on_step=True, on_epoch=True, prog_bar=True, logger=True)
+        self.log("test/f1", f1, on_step=True, on_epoch=True, prog_bar=True, logger=True)
+        self.log("test/roc_auc", roc_auc, on_step=True, on_epoch=True, prog_bar=True, logger=True)
 
-        return loss
+        return loss, f1, roc_auc
 
     def setup(self, stage: str) -> None:
         """Lightning hook that is called at the beginning of fit (train + validate), validate,
