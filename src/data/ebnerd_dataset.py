@@ -181,7 +181,7 @@ class EbnerdDataset(Dataset):
         MAX_TITLE_LENGTH = 30
 
         # LOAD HUGGINGFACE:
-        transformer_model = AutoModel.from_pretrained(TRANSFORMER_MODEL_NAME)
+        #transformer_model = AutoModel.from_pretrained(TRANSFORMER_MODEL_NAME)
         transformer_tokenizer = AutoTokenizer.from_pretrained(TRANSFORMER_MODEL_NAME)
 
         df_articles, cat_cal = concat_str_columns(df_articles, columns=TEXT_COLUMNS_TO_USE)
