@@ -58,7 +58,9 @@ def train_model(args, model, train_data, eval_data, test_data, train_user_news, 
                 tensors.append(F.pad(torch.tensor(l, dtype=torch.int32, device=device), pad, value=pad_value))
             return torch.stack(tensors)
 
-        dense_matrix_device = torch.device("cpu")
+        dense_matrix_device = torch.device("cuda")
+        user_lengths = user_lengths.to(dense_matrix_device)
+        news_lengths = news_lengths.to(dense_matrix_device)
         train_user_news = list_of_lists_to_torch(train_user_news, 0, user_lengths.max().item(), dense_matrix_device)
         train_news_user = list_of_lists_to_torch(train_news_user, 0, news_lengths.max().item(), dense_matrix_device)
 
@@ -89,9 +91,11 @@ def train_model(args, model, train_data, eval_data, test_data, train_user_news, 
                 news_user, dtype=torch.long).to(device)
 
             optimizer.zero_grad()
-            scores, scores_normalized, predict_label, user_embeddings, news_embeddings = model(
+            user_embeddings, news_embeddings = model(
                 user_indices, news_indices, user_news, news_user
             )
+
+            scores = model.get_edge_probability(user_embeddings, news_embeddings)
 
             total_loss = criterion(scores, labels)
             infer_loss = model.infer_loss(user_embeddings, news_embeddings)
