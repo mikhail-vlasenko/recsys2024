@@ -35,7 +35,6 @@ class OriginalModule(LightningModule):
         self.train_news_user = train_news_user
         self.train_user_news = train_user_news
         self.n_news = n_news
-        self.id_to_index = id_to_index
 
         self.net = net
 
