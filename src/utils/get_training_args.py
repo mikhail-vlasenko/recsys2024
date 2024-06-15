@@ -48,6 +48,7 @@ def get_training_args():
     parser.add_argument('--version', type=int, default=0,
                             help='Different version under the same set')
     parser.add_argument('--dropout_rate', type=float, default=0.3, help='dropout rate')
+    parser.add_argument('--optimized_subsampling', type=bool, default=True)
 
     show_loss = True
     show_time = False

@@ -4,7 +4,9 @@ import torch
 from lightning import LightningModule
 from torchmetrics import MinMetric, MeanMetric
 from src.model.components.model import Model as Net
+from src.data.data_loader import random_neighbor, optimized_random_neighbor
 import logging
+import tqdm
 
 
 class OriginalModule(LightningModule):
@@ -14,6 +16,10 @@ class OriginalModule(LightningModule):
         optimizer: torch.optim.Optimizer,
         scheduler: torch.optim.lr_scheduler,
         compile: bool,
+        train_user_news,
+        train_news_user,
+        n_news,
+        args: bool
     ) -> None:
         """Initialize a `pl_classifier`.
 
@@ -27,11 +33,55 @@ class OriginalModule(LightningModule):
         # this line allows to access init params with 'self.hparams' attribute
         # also ensures init params will be stored in ckpt
         self.save_hyperparameters(logger=False)
+        self.train_news_user = train_news_user
+        self.train_user_news = train_user_news
+        self.n_news = n_news
 
         self.net = net
 
         # loss function
         self.criterion = torch.nn.binary_cross_entropy_with_logits()
+
+        if args.optimized_subsampling:
+            self.pre_load_neighbors()
+        
+
+    def pre_load_neighbors(self):
+        max_news_id = n_news
+        temp_train_news_user = []
+        for i in range(max_news_id):
+            if i in train_news_user:
+                temp_train_news_user.append(train_news_user[i])
+            else:
+                temp_train_news_user.append([])
+        train_news_user = temp_train_news_user
+        user_lengths = torch.tensor([len(self.train_user_news[i]) for i in range(len(self.train_user_news))]).unsqueeze(1)#.to(device)
+        news_lengths = torch.tensor([len(self.train_news_user[i]) for i in range(len(self.train_news_user))]).unsqueeze(1)#.to(device)
+
+        def list_of_lists_to_torch(lst, pad_value, max_len, device):
+            tensors = []
+            for l in tqdm(
+                    lst,
+                    desc=f"Converting to torch (needs {max_len * len(lst) * 4 / 1024 / 1024:.2f} MB on {device})"
+            ):
+                pad = (0, max_len - len(l))  # pad 0 on the left and to max_len on the right
+                tensors.append(F.pad(torch.tensor(l, dtype=torch.int32, device=device), pad, value=pad_value))
+            return torch.stack(tensors)
+
+        dense_matrix_device = torch.device("cpu")
+        self.train_user_news = list_of_lists_to_torch(self.train_user_news, 0, user_lengths.max().item(), dense_matrix_device)
+        self.train_news_user = list_of_lists_to_torch(self.train_news_user, 0, news_lengths.max().item(), dense_matrix_device)
+
+
+    def load_batch(self, batch):
+        if self.hparams.optimized_subsampling:
+                user_news, news_user = optimized_random_neighbor(args, train_user_news, train_news_user,
+                                                                 user_lengths, news_lengths)
+        else:
+            user_news, news_user = random_neighbor(args, train_user_news, train_news_user, len(news_title))
+
+        user_news, news_user = torch.tensor(user_news, dtype=torch.long), torch.tensor(
+            news_user, dtype=torch.long)
 
     def on_train_start(self) -> None:
         """Lightning hook that is called when training begins."""

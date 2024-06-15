@@ -142,6 +142,25 @@ class EbnerdDataset(Dataset):
             for text in texts
         ]
     
+    def preprocess_neighbors(self):
+        #Built a dictionary where for each article we have each user who clicked on it
+        news_user_dict = self.df_history.groupby(DEFAULT_HISTORY_ARTICLE_ID_COL).agg(pl.col(DEFAULT_USER_COL).list()).to_dict()
+
+        #Built a dictionary where for each user we have each article they clicked on
+        user_news_dict = self.df_history.groupby(DEFAULT_USER_COL).agg(pl.col(DEFAULT_HISTORY_ARTICLE_ID_COL).list()).to_dict()
+
+        #this one should be a list of lists, so convert it and create an id_to_index mapping 
+        max_news_id = np.max(user_news_dict.keys())
+        temp_user_news = []
+        for i in range(max_news_id):
+            if i in user_news_dict:
+                temp_user_news.append(user_news_dict[i])
+            else:
+                temp_user_news.append([])
+        user_news_list = temp_user_news
+
+        return user_news_list, news_user_dict
+    
     def preprocess_articles(self, df_articles: pl.DataFrame) -> pl.DataFrame:
         TRANSFORMER_MODEL_NAME = "FacebookAI/xlm-roberta-base"
         # this should be changed probably to be a parameter
