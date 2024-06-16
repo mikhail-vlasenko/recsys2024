@@ -87,7 +87,7 @@ class NeighborAggregator(Aggregator):
 
 
 class RoutingLayer(nn.Module):
-    def __init__(self, layers, out_caps, cap_sz, device, batch_size, drop, inp_caps=None, name=None, tau=1.0):
+    def __init__(self, layers, out_caps, cap_sz, batch_size, drop, inp_caps=None, name=None, tau=1.0):
         super().__init__()
         if not name:
             layer = self.__class__.__name__.lower()
