@@ -225,7 +225,7 @@ class EbnerdDataset(Dataset):
             article_path = Path(path) / data_split / "articles.parquet"
             path = Path(path) / data_split / mode
 
-        data_pkl_path = 'data' / f'{mode}_seed_{seed}.pkl'
+        data_pkl_path = Path('data') / f'{mode}_seed_{seed}.pkl'
 
         if os.path.exists(data_pkl_path):
             with open(data_pkl_path, 'rb') as f:
