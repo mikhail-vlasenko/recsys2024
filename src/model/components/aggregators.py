@@ -104,19 +104,20 @@ class RoutingLayer(nn.Module):
             self.inp_caps = inp_caps
             if layers == 1:
                 self.fc1 = nn.Linear(inp_caps * cap_sz, cap_sz * out_caps)
-                self.fc1 = self.fc1.to(device)
             if layers == 2:
                 self.fc2 = nn.Linear(inp_caps * cap_sz, cap_sz * out_caps)
-                self.fc2 = self.fc2.to(device)
 
     def forward(self, self_vectors, neighbor_vectors, max_iter):
         self_vectors = self.drop(self_vectors)
         neighbor_vectors = self.drop(neighbor_vectors)
 
         if hasattr(self, 'fc1'):
+            self.fc1 = self.fc1.to(self_vectors.device)
             self_z = F.relu(self.fc1(self_vectors.reshape(-1, self.inp_caps * self.cap_sz)))
             neighbor_z = F.relu(self.fc1(neighbor_vectors.reshape(-1, self.inp_caps * self.cap_sz)))
+            
         elif hasattr(self, 'fc2'):
+            self.fc2 = self.fc2.to(self_vectors.device)
             self_z = F.relu(self.fc2(self_vectors.reshape(-1, self.inp_caps * self.cap_sz)))
             neighbor_z = F.relu(self.fc2(neighbor_vectors.reshape(-1, self.inp_caps * self.cap_sz)))
         else:

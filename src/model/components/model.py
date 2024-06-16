@@ -63,7 +63,7 @@ class Model(nn.Module):
         inp_caps = [None, self.ncaps]
         out_caps = [self.ncaps, self.ncaps - self.dcaps]
         self.routers = [
-            RoutingLayer(routing_layers[i], out_caps[i], self.nhidden, self.batch_size, self.device, args.dropout_rate, inp_caps[i])
+            RoutingLayer(routing_layers[i], out_caps[i], self.nhidden, self.batch_size, args.dropout_rate, inp_caps[i])
             for i in range(self.n_iter)
         ]
 
