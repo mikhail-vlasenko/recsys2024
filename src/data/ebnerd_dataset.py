@@ -16,6 +16,8 @@ from transformers import AutoTokenizer, AutoModel
 from pathlib import Path
 import polars as pl
 import numpy as np
+import os
+import pickle 
 
 from src.ebrec.utils._constants import (
     DEFAULT_HISTORY_ARTICLE_ID_COL,
@@ -55,11 +57,11 @@ from src.ebrec.utils._python import (
 
 class EbnerdDataset(Dataset):
 
-    def __init__(self, root_dir, data_split, mode = "train", history_size = 30, fraction = 0.1):
+    def __init__(self, root_dir, data_split, mode = "train", history_size = 30, fraction = 1, seed = 0):
         super().__init__()
 
         self.df_behaviors: DataFrame
-        self.df_behaviors, self.df_history, self.article_df = self.ebnerd_from_path(path=root_dir, history_size=history_size, mode=mode, data_split=data_split, fraction=fraction)
+        self.df_behaviors, self.df_history, self.article_df = self.ebnerd_from_path(path=root_dir, history_size=history_size, mode=mode, data_split=data_split, fraction=fraction, seed=seed)
 
         self.num_users: int
         self.num_articles: int
@@ -68,8 +70,6 @@ class EbnerdDataset(Dataset):
         assert max(self.df_behaviors[DEFAULT_USER_COL]) + 1 == len(self.df_behaviors[DEFAULT_USER_COL].unique()), "User ids are not continuous"
 
         self.unknown_representation = "zeros"
-        if mode != "test":
-            self.id_to_index = self.get_id_to_index()
 
         #preprocess the articles into embedding vectors
         #self.embedded_articles, self.article_mapping = self.preprocess_articles(articles)
@@ -93,7 +93,7 @@ class EbnerdDataset(Dataset):
 
         # Return the tuple
         #print(article_ids_clicked)
-        return user_id, self.id_to_index[article_ids_clicked], labels
+        return user_id, article_ids_clicked, labels
     
     def compress_user_ids(self):
         # Get the unique user ids
@@ -128,12 +128,6 @@ class EbnerdDataset(Dataset):
     def get_n_users(self) -> int:
         return len(self.df_behaviors[DEFAULT_USER_COL])
     
-    def get_id_to_index(self):
-        #create index mapping 
-        id_list = self.article_df[DEFAULT_ARTICLE_ID_COL].to_list()
-        id_to_index = {id: i for i, id in enumerate(id_list)}	
-        return id_to_index
-
     def get_word_ids(self, max_title_length, max_entity_length, max_group_length) -> Tensor:
         print("getting word ids")
         #intialize the tokenizer
@@ -218,7 +212,7 @@ class EbnerdDataset(Dataset):
 
         return df_articles, article_mapping
 
-    def ebnerd_from_path(self, path: Path, mode: str, data_split, history_size: int = 30, fraction = 0.1) -> pl.DataFrame:
+    def ebnerd_from_path(self, path: Path, mode: str, data_split, seed, history_size: int = 30, fraction = 1) -> pl.DataFrame:
         """
         Load ebnerd - function
         # I could add something here to select columns but I dont think its necessary for now, makes more sense to do in the loader overwrite
@@ -230,52 +224,63 @@ class EbnerdDataset(Dataset):
         else:
             article_path = Path(path) / data_split / "articles.parquet"
             path = Path(path) / data_split / mode
-        
-        df_history = (
-            pl.scan_parquet(path.joinpath("history.parquet"))
-            .select(DEFAULT_USER_COL, DEFAULT_HISTORY_ARTICLE_ID_COL)
-            .pipe(
-                truncate_history,
-                column=DEFAULT_HISTORY_ARTICLE_ID_COL,
-                history_size=history_size,
-                padding_value=0,
-                enable_warning=False,
-            )
-        )
-        df_behaviors = (
-            pl.scan_parquet(path.joinpath("behaviors.parquet"))
-            .collect()
-            .pipe(
-                slice_join_dataframes,
-                df2=df_history.collect(),
-                on=DEFAULT_USER_COL,
-                how="left",
-            )
-        )
 
-        if mode == "train":
-            df_behaviors = (df_behaviors
+        data_pkl_path = f'data_{mode}_seed_{seed}.pkl'
+
+        if os.path.exists(data_pkl_path):
+            with open(data_pkl_path, 'rb') as f:
+                df_behaviors, df_history, df_articles = pickle.load(f)
+
+        else:
+            df_history = (
+                pl.scan_parquet(path.joinpath("history.parquet"))
+                .select(DEFAULT_USER_COL, DEFAULT_HISTORY_ARTICLE_ID_COL)
                 .pipe(
-                    sampling_strategy_wu2019,
-                    npratio=4,
-                    shuffle=True,
-                    with_replacement=True,
-                    seed=123,
+                    truncate_history,
+                    column=DEFAULT_HISTORY_ARTICLE_ID_COL,
+                    history_size=history_size,
+                    padding_value=0,
+                    enable_warning=False,
                 )
-                .pipe(create_binary_labels_column)
-                .sample(fraction=fraction)
             )
-        if mode == "test" or mode == "validation":
-            df_behaviors = (df_behaviors
-                .pipe(create_binary_labels_column)
-                .sample(fraction=fraction)
+            df_behaviors = (
+                pl.scan_parquet(path.joinpath("behaviors.parquet"))
+                .collect()
+                .pipe(
+                    slice_join_dataframes,
+                    df2=df_history.collect(),
+                    on=DEFAULT_USER_COL,
+                    how="left",
+                )
             )
 
-        #also load article data 
-        df_articles = pl.read_parquet(article_path)
+            if mode == "train":
+                df_behaviors = (df_behaviors
+                    .pipe(
+                        sampling_strategy_wu2019,
+                        npratio=4,
+                        shuffle=True,
+                        with_replacement=True,
+                        seed=123,
+                    )
+                    .pipe(create_binary_labels_column)
+                    .sample(fraction=fraction)
+                )
+            if mode == "test" or mode == "validation":
+                df_behaviors = (df_behaviors
+                    .pipe(create_binary_labels_column)
+                    .sample(fraction=fraction)
+                )
+
+            #also load article data 
+            df_articles = pl.read_parquet(article_path)
+
+            #pickle the data
+            with open(data_pkl_path, 'wb') as f:
+                pickle.dump((df_behaviors, df_history, df_articles), f)
 
 
-        return df_behaviors, df_history, df_articles
+            return df_behaviors, df_history, df_articles
 
     @classmethod
     def download_and_extract(cls, root_dir: str, data_download_path: str, api_key: str):
