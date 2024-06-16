@@ -126,13 +126,13 @@ class OriginalModule(LightningModule):
 
         scores, scores_normalized, predict_label, user_embeddings, news_embeddings = self.net(user_indices, news_indices, user_news, news_user)
 
-        loss = self.compute_loss(scores, labels, user_embeddings, news_embeddings)
+        loss = self.compute_loss(scores_normalized, labels, user_embeddings, news_embeddings)
 
         self.log("train/loss", loss, on_step=True, on_epoch=True, prog_bar=True, logger=True)
         return loss
 
     def on_train_epoch_end(self) -> None:
-        "Lightning hook that is called when a training epoch ends."
+        "Lightning hook that is calledscores_normalized when a training epoch ends."
         pass
 
     def validation_step(
@@ -142,7 +142,7 @@ class OriginalModule(LightningModule):
 
         scores, scores_normalized, predict_label, user_embeddings, news_embeddings = self.net(user_indices, news_indices, user_news, news_user)
 
-        loss = self.compute_loss(scores, labels, user_embeddings, news_embeddings)
+        loss = self.compute_loss(, labels, user_embeddings, news_embeddings)
 
         self.log("val/loss", loss, on_step=True, on_epoch=True, prog_bar=True, logger=True)
 
@@ -161,7 +161,7 @@ class OriginalModule(LightningModule):
 
         scores, scores_normalized, predict_label, user_embeddings, news_embeddings = self.net(user_indices, news_indices, user_news, news_user)
 
-        loss = self.compute_loss(scores, labels, user_embeddings, news_embeddings)
+        loss = self.compute_loss(scores_normalized, labels, user_embeddings, news_embeddings)
 
         self.log("test/loss", loss, on_step=True, on_epoch=True, prog_bar=True, logger=True)
 
