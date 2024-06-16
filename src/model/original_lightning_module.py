@@ -102,9 +102,7 @@ class OriginalModule(LightningModule):
         pass
 
     def compute_loss(self, scores, labels, user_embeddings, news_embeddings):
-        print("scores:", scores)
-        scores = scores.float()
-        total_loss = self.criterion(scores, labels)
+        total_loss = self.criterion(scores, labels.float())
 
         l2_loss = sum(torch.norm(param) for param in self.parameters())
         infer_loss, ret_w = self.net.infer_loss(user_embeddings, news_embeddings)
