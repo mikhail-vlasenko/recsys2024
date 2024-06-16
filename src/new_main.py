@@ -61,7 +61,7 @@ def main():
     checkpoint_callback = ModelCheckpoint(
         dirpath="checkpoints/",
         filename=checkpoint_filename + "-{epoch}-{val_loss:.2f}",
-        monitor="val_loss",
+        monitor="val/loss",
         mode="min",
     )
 
