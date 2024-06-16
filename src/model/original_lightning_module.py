@@ -124,7 +124,7 @@ class OriginalModule(LightningModule):
         
         user_indices, news_indices, user_news, news_user, labels = self.load_batch(batch)
 
-        scores, user_embeddings, news_embeddings = self.net(user_indices, news_indices, user_news, news_user)
+        scores, scores_normalized, predict_label, user_embeddings, news_embeddings = self.net(user_indices, news_indices, user_news, news_user)
 
         loss = self.compute_loss(scores, labels, user_embeddings, news_embeddings)
 
@@ -140,7 +140,7 @@ class OriginalModule(LightningModule):
     ) -> None:
         user_indices, news_indices, user_news, news_user, labels = self.load_batch(batch)
 
-        scores, user_embeddings, news_embeddings = self.net(user_indices, news_indices, user_news, news_user)
+        scores, scores_normalized, predict_label, user_embeddings, news_embeddings = self.net(user_indices, news_indices, user_news, news_user)
 
         loss = self.compute_loss(scores, labels, user_embeddings, news_embeddings)
 
@@ -159,7 +159,7 @@ class OriginalModule(LightningModule):
         """
         user_indices, news_indices, user_news, news_user, labels = self.load_batch(batch)
 
-        scores, user_embeddings, news_embeddings = self.net(user_indices, news_indices, user_news, news_user)
+        scores, scores_normalized, predict_label, user_embeddings, news_embeddings = self.net(user_indices, news_indices, user_news, news_user)
 
         loss = self.compute_loss(scores, labels, user_embeddings, news_embeddings)
 
