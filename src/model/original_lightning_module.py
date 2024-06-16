@@ -132,7 +132,7 @@ class OriginalModule(LightningModule):
         return loss
 
     def on_train_epoch_end(self) -> None:
-        "Lightning hook that is calledscores_normalized when a training epoch ends."
+        "Lightning hook that is called scores_normalized when a training epoch ends."
         pass
 
     def validation_step(

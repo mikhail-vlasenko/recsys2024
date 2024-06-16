@@ -231,6 +231,8 @@ class EbnerdDataset(Dataset):
             with open(data_pkl_path, 'rb') as f:
                 (df_behaviors, df_history, df_articles) = pickle.load(f)
 
+            return df_behaviors, df_history, df_articles
+
         else:
             df_history = (
                 pl.scan_parquet(path.joinpath("history.parquet"))
