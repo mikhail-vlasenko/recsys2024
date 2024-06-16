@@ -87,7 +87,7 @@ class NeighborAggregator(Aggregator):
 
 
 class RoutingLayer(nn.Module):
-    def __init__(self, layers, out_caps, cap_sz, batch_size, drop, inp_caps=None, name=None, tau=1.0, device):
+    def __init__(self, layers, out_caps, cap_sz, device, batch_size, drop, inp_caps=None, name=None, tau=1.0):
         super().__init__()
         if not name:
             layer = self.__class__.__name__.lower()
@@ -114,7 +114,6 @@ class RoutingLayer(nn.Module):
         neighbor_vectors = self.drop(neighbor_vectors)
 
         if hasattr(self, 'fc1'):
-
             self_z = F.relu(self.fc1(self_vectors.reshape(-1, self.inp_caps * self.cap_sz)))
             neighbor_z = F.relu(self.fc1(neighbor_vectors.reshape(-1, self.inp_caps * self.cap_sz)))
         elif hasattr(self, 'fc2'):
