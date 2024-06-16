@@ -61,6 +61,7 @@ class OriginalModelDatamodule(LightningDataModule):
             batch_size=self.batch_size_per_device,
             num_workers=self.hparams.num_workers,
             pin_memory=self.hparams.pin_memory,
+            drop_last=True,
             shuffle=True,
         )
 
@@ -74,7 +75,8 @@ class OriginalModelDatamodule(LightningDataModule):
             batch_size=self.batch_size_per_device,
             num_workers=self.hparams.num_workers,
             pin_memory=self.hparams.pin_memory,
-            shuffle=True,
+            drop_last=True,
+            shuffle=False,
         )
 
     def test_dataloader(self) -> DataLoader[Any]:
@@ -87,7 +89,8 @@ class OriginalModelDatamodule(LightningDataModule):
             batch_size=self.batch_size_per_device,
             num_workers=self.hparams.num_workers,
             pin_memory=self.hparams.pin_memory,
-            shuffle=True,
+            drop_last=True, #code breaks if last isnt drop 
+            shuffle=False,
         )
 
 
