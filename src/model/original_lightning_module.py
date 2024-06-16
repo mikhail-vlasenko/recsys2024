@@ -49,16 +49,8 @@ class OriginalModule(LightningModule):
         
 
     def pre_load_neighbors(self):
-        max_news_id = self.n_news
-        temp_train_news_user = []
-        for i in range(max_news_id):
-            if i in self.train_news_user:
-                temp_train_news_user.append(train_news_user[i])
-            else:
-                temp_train_news_user.append([])
-        train_news_user = temp_train_news_user
         user_lengths = torch.tensor([len(self.train_user_news[i]) for i in range(len(self.train_user_news))]).unsqueeze(1)#.to(device)
-        news_lengths = torch.tensor([len(train_news_user[i]) for i in range(len(train_news_user))]).unsqueeze(1)#.to(device)
+        news_lengths = torch.tensor([len(self.train_news_user[i]) for i in range(len(self.train_news_user))]).unsqueeze(1)#.to(device)
         self.user_lengths = user_lengths
         self.news_lengths = news_lengths
 
@@ -88,7 +80,7 @@ class OriginalModule(LightningModule):
         if not self.hparams.args.optimized_subsampling:
             user_news, news_user = random_neighbor(self.hparams.args, user_news, news_user, self.n_news)
         else:
-            user_news, news_user = optimized_random_neighbor(self.hparams.args, user_news, news_user, self.n_news, self.user_lengths, self.news_lengths)
+            user_news, news_user = optimized_random_neighbor(self.hparams.args, user_news, news_user, self.user_lengths, self.news_lengths)
 
         user_news, news_user = torch.tensor(user_news, dtype=torch.long).to(self.device), torch.tensor(
                 news_user, dtype=torch.long).to(self.device)
