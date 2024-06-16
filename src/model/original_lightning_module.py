@@ -80,7 +80,6 @@ class OriginalModule(LightningModule):
         if not self.hparams.args.optimized_subsampling:
             user_news, news_user = random_neighbor(self.hparams.args, user_news, news_user, self.n_news)
         else:
-            print('using optimized subsampling')
             user_news, news_user = optimized_random_neighbor(self.hparams.args, user_news, news_user, self.user_lengths, self.news_lengths)
 
         user_news, news_user = torch.tensor(user_news, dtype=torch.long).to(self.device), torch.tensor(
