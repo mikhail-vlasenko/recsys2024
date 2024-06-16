@@ -107,7 +107,7 @@ class OriginalModule(LightningModule):
         l2_loss = sum(torch.norm(param) for param in self.parameters())
         infer_loss = self.net.infer_loss(user_embeddings, news_embeddings)
 
-        loss = (1 - self.net.balance) * total_loss + self.net.balance * infer_loss + self.net.l2_weight * l2_loss
+        loss = (1 - self.hparams.args.balance) * total_loss + self.hparams.args.balance * infer_loss
 
         return loss
 
