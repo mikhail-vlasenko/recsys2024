@@ -27,7 +27,7 @@ from src.ebrec.utils._constants import (
     DEFAULT_TITLE_COL,
     DEFAULT_USER_COL,
     DEFAULT_NER_COL,
-    DEFAULT_ENTITIES_COL
+    DEFAULT_ENTITIES_COL, DEFAULT_ARTICLE_ID_COL
 )
 
 from src.ebrec.utils._behaviors import (
@@ -59,14 +59,15 @@ class EbnerdDataset(Dataset):
         super().__init__()
 
         self.df_behaviors: DataFrame
-        self.df_behaviors, self.df_history, articles = self.ebnerd_from_path(path=root_dir, history_size=history_size, mode=mode, data_split=data_split, fraction=fraction)
-
-        self.unknown_representation = "zeros"
-        self.article_df = articles
-        if mode != "test":
-            self.id_to_index = self.get_id_to_index()
+        self.df_behaviors, self.df_history, self.article_df = self.ebnerd_from_path(path=root_dir, history_size=history_size, mode=mode, data_split=data_split, fraction=fraction)
 
         self.compress_user_ids()
+        self.compress_article_ids()
+        assert max(self.df_behaviors[DEFAULT_USER_COL]) + 1 == len(self.df_behaviors[DEFAULT_USER_COL].unique()), "User ids are not continuous"
+
+        self.unknown_representation = "zeros"
+        if mode != "test":
+            self.id_to_index = self.get_id_to_index()
 
         #preprocess the articles into embedding vectors
         #self.embedded_articles, self.article_mapping = self.preprocess_articles(articles)
@@ -84,6 +85,7 @@ class EbnerdDataset(Dataset):
 
         # Get the required columns and convert them to numpy arrays if needed
         user_id = row['user_id'][0]
+        # i think we should use DEFAULT_ARTICLE_ID_COL instead
         article_ids_clicked = row['article_ids_clicked'][-1][0] #idk if this can return more than one element. If so idk how to deal with it. 
         labels = row['labels'][0][-1]
 
@@ -101,13 +103,30 @@ class EbnerdDataset(Dataset):
             pl.col(DEFAULT_USER_COL).apply(lambda user_id: user_id_to_index[user_id]).alias(DEFAULT_USER_COL)
         )
 
+    def compress_article_ids(self):
+        unique_article_ids = self.article_df[DEFAULT_ARTICLE_ID_COL].unique().to_numpy()
+
+        article_id_to_index = {user_id: index for index, user_id in enumerate(unique_article_ids)}
+        article_id_to_index[np.nan] = np.nan
+
+        self.df_behaviors = self.df_behaviors.with_columns(
+            pl.col(DEFAULT_ARTICLE_ID_COL).apply(lambda article_id: article_id_to_index[int(article_id)]).alias(DEFAULT_ARTICLE_ID_COL)
+        )
+        self.df_behaviors = self.df_behaviors.with_columns(
+            pl.col(DEFAULT_CLICKED_ARTICLES_COL).apply(
+                lambda article_ids: [article_id_to_index[int(article_id)] for article_id in article_ids]
+            ).alias(DEFAULT_CLICKED_ARTICLES_COL)
+        )
+        self.article_df = self.article_df.with_columns(
+            pl.col(DEFAULT_ARTICLE_ID_COL).apply(lambda article_id: article_id_to_index[int(article_id)]).alias(DEFAULT_ARTICLE_ID_COL)
+        )
+
     def get_n_users(self) -> int:
-        assert max(self.df_behaviors[DEFAULT_USER_COL]) + 1 == len(self.df_behaviors[DEFAULT_USER_COL].unique()), "User ids are not continuous"
-        return max(self.df_behaviors[DEFAULT_USER_COL])
+        return len(self.df_behaviors[DEFAULT_USER_COL])
     
     def get_id_to_index(self):
         #create index mapping 
-        id_list = self.article_df['article_id'].to_list()
+        id_list = self.article_df[DEFAULT_ARTICLE_ID_COL].to_list()
         id_to_index = {id: i for i, id in enumerate(id_list)}	
         return id_to_index
 
