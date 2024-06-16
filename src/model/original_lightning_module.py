@@ -41,7 +41,7 @@ class OriginalModule(LightningModule):
         # loss function
         self.criterion = F.binary_cross_entropy_with_logits
 
-        if not args.optimized_subsampling:
+        if args.optimized_subsampling:
             print("args.optimized_subsampling:", args.optimized_subsampling)
             self.pre_load_neighbors()
 
@@ -85,7 +85,7 @@ class OriginalModule(LightningModule):
             user_news, news_user = self.train_user_news, self.train_news_user
 
         #this if statement is the wrong way arround because for some reason that arg is broken 
-        if self.hparams.args.optimized_subsampling:
+        if not self.hparams.args.optimized_subsampling:
             user_news, news_user = random_neighbor(self.hparams.args, user_news, news_user, self.n_news)
         else:
             user_news, news_user = optimized_random_neighbor(self.hparams.args, user_news, news_user, self.n_news, self.user_lengths, self.news_lengths)
