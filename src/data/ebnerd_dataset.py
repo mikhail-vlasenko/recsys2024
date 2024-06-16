@@ -61,6 +61,8 @@ class EbnerdDataset(Dataset):
         self.df_behaviors: DataFrame
         self.df_behaviors, self.df_history, self.article_df = self.ebnerd_from_path(path=root_dir, history_size=history_size, mode=mode, data_split=data_split, fraction=fraction)
 
+        self.num_users: int
+        self.num_articles: int
         self.compress_user_ids()
         self.compress_article_ids()
         assert max(self.df_behaviors[DEFAULT_USER_COL]) + 1 == len(self.df_behaviors[DEFAULT_USER_COL].unique()), "User ids are not continuous"
@@ -98,6 +100,7 @@ class EbnerdDataset(Dataset):
         unique_user_ids = self.df_behaviors[DEFAULT_USER_COL].unique().to_numpy()
         # Create a mapping from user id to index
         user_id_to_index = {user_id: index for index, user_id in enumerate(unique_user_ids)}
+        self.num_users = len(user_id_to_index)
         # Replace the user ids with the index
         self.df_behaviors = self.df_behaviors.with_columns(
             pl.col(DEFAULT_USER_COL).apply(lambda user_id: user_id_to_index[user_id]).alias(DEFAULT_USER_COL)
@@ -107,6 +110,7 @@ class EbnerdDataset(Dataset):
         unique_article_ids = self.article_df[DEFAULT_ARTICLE_ID_COL].unique().to_numpy()
 
         article_id_to_index = {user_id: index for index, user_id in enumerate(unique_article_ids)}
+        self.num_articles = len(article_id_to_index)
         article_id_to_index[np.nan] = np.nan
 
         self.df_behaviors = self.df_behaviors.with_columns(
@@ -179,31 +183,18 @@ class EbnerdDataset(Dataset):
         ]
     
     def preprocess_neighbors(self):
-        #Built a dictionary where for each article we have each user who clicked on it
-        news_user_df = self.df_behaviors.groupby(DEFAULT_CLICKED_ARTICLES_COL).agg(pl.col(DEFAULT_USER_COL))
-        news_user_dict = {row[0][0]: row[1] for row in news_user_df.rows()} #this is correct
+        news_user = [[] for _ in range(self.num_articles)]
+        user_news = [[] for _ in range(self.num_users)]
+        for row in self.df_behaviors.rows(named=True):
+            news_ids = row[DEFAULT_CLICKED_ARTICLES_COL]
+            user_id = row[DEFAULT_USER_COL]
+            for news_id in news_ids:
+                if user_id not in news_user[news_id]:
+                    news_user[news_id].append(user_id)
+                if news_id not in user_news[user_id]:
+                    user_news[user_id].append(news_id)
 
-        #Built a dictionary where for each user we have each article they clicked on
-        user_news_df = self.df_behaviors.groupby(DEFAULT_USER_COL).agg(pl.col(DEFAULT_CLICKED_ARTICLES_COL))
-        user_news_dict = {row[0]: [item for sublist in row[1] for item in sublist] for row in user_news_df.rows()} #this correcttoo
-
-
-        #this one should be a list of lists, so convert it and create an id_to_index mapping 
-        '''
-        
-        print(user_news_df)
-        print(user_news_dict)
-        max_news_id = np.max([int(i) for i in user_news_dict.keys()])
-        temp_user_news = []
-        for i in range(max_news_id):
-            if i in user_news_dict:
-                temp_user_news.append(user_news_dict[i])
-            else:
-                temp_user_news.append([])
-        user_news_list = temp_user_news
-        '''
-
-        return user_news_dict, news_user_dict
+        return user_news, news_user
     
     def preprocess_articles(self, df_articles: pl.DataFrame) -> pl.DataFrame:
         TRANSFORMER_MODEL_NAME = "FacebookAI/xlm-roberta-base"
