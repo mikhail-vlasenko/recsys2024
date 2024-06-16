@@ -277,7 +277,7 @@ class EbnerdDataset(Dataset):
 
             #pickle the data
             with open(data_pkl_path, 'wb') as f:
-                pickle.dump((df_behaviors.collect(), df_history.collect(), df_articles.collect()), f)
+                pickle.dump((df_behaviors, df_history.collect(), df_articles), f)
 
 
             return df_behaviors, df_history, df_articles
