@@ -112,12 +112,10 @@ class RoutingLayer(nn.Module):
         neighbor_vectors = self.drop(neighbor_vectors)
 
         if hasattr(self, 'fc1'):
-            self.fc1 = self.fc1.to(self_vectors.device)
             self_z = F.relu(self.fc1(self_vectors.reshape(-1, self.inp_caps * self.cap_sz)))
             neighbor_z = F.relu(self.fc1(neighbor_vectors.reshape(-1, self.inp_caps * self.cap_sz)))
             
         elif hasattr(self, 'fc2'):
-            self.fc2 = self.fc2.to(self_vectors.device)
             self_z = F.relu(self.fc2(self_vectors.reshape(-1, self.inp_caps * self.cap_sz)))
             neighbor_z = F.relu(self.fc2(neighbor_vectors.reshape(-1, self.inp_caps * self.cap_sz)))
         else:
