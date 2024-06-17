@@ -45,13 +45,8 @@ class OriginalModule(LightningModule):
             print("args.optimized_subsampling:", args.optimized_subsampling)
             self.pre_load_neighbors()
 
-        # validation metrics
-        self.val_f1 = classification.BinaryF1Score()
-        self.val_roc_auc = classification.BinaryAUROC()
-
-        # test metrics
-        self.test_f1 = classification.BinaryF1Score()
-        self.test_roc_auc = classification.BinaryAUROC()
+        self.f1 = classification.BinaryF1Score()
+        self.auc = classification.BinaryAUROC()
 
         self.more_labels = args.more_labels
 
@@ -167,8 +162,8 @@ class OriginalModule(LightningModule):
     ):
         loss, scores, labels = self.loss_from_batch(batch, ret_scores=True)
 
-        f1 = self.val_f1(scores, labels).compute()
-        roc_auc = self.val_roc_auc(scores, labels).compute()
+        f1 = self.f1(scores, labels)
+        roc_auc = self.auc(scores, labels)
 
         self.log("val/loss", loss, on_step=True, on_epoch=True, prog_bar=True, logger=True)
         self.log("val/f1", f1, on_step=True, on_epoch=True, prog_bar=True, logger=True)
@@ -187,8 +182,8 @@ class OriginalModule(LightningModule):
         """
         loss, scores, labels = self.loss_from_batch(batch, ret_scores=True)
 
-        f1 = self.test_f1(scores, labels).compute()
-        roc_auc = self.test_roc_auc(scores, labels).compute()
+        f1 = self.f1(scores, labels)
+        roc_auc = self.auc(scores, labels)
 
         self.log("test/loss", loss, on_step=True, on_epoch=True, prog_bar=True, logger=True)
         self.log("test/f1", f1, on_step=True, on_epoch=True, prog_bar=True, logger=True)
