@@ -145,7 +145,7 @@ class OriginalModule(LightningModule):
         :return: A tensor of losses between model predictions and targets.
         """
 
-        loss = self.loss_from_batch(batch)
+        loss = self.loss_from_batch(batch, mode="train")
 
         self.log("train/loss", loss, on_step=True, on_epoch=True, prog_bar=True, logger=True)
         return loss
