@@ -47,7 +47,7 @@ def main():
         len(news_title)
     )
 
-    module = OriginalModule(net, compile=True, args=args, train_user_news=train_user_news, train_news_user=train_news_user, n_news=n_news)
+    module = OriginalModule(net, args=args, train_user_news=train_user_news, train_news_user=train_news_user, n_news=n_news)
     checkpoint_filename = f"{args.ebnerd_variant}-original-model"
     checkpoint_callback = ModelCheckpoint(
         dirpath="checkpoints/",
