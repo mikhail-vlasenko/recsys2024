@@ -57,11 +57,11 @@ from src.ebrec.utils._python import (
 
 class EbnerdDataset(Dataset):
 
-    def __init__(self, root_dir, data_split, mode = "train", history_size = 30, fraction = 1, seed = 0):
+    def __init__(self, root_dir, data_split, mode = "train", history_size = 30, fraction = 1, seed = 0, npratio=4):
         super().__init__()
 
         self.df_behaviors: DataFrame
-        self.df_behaviors, self.df_history, self.article_df = self.ebnerd_from_path(path=root_dir, history_size=history_size, mode=mode, data_split=data_split, fraction=fraction, seed=seed)
+        self.df_behaviors, self.df_history, self.article_df = self.ebnerd_from_path(path=root_dir, history_size=history_size, mode=mode, data_split=data_split, fraction=fraction, seed=seed, npratio=npratio)
 
         self.num_users: int
         self.num_articles: int
