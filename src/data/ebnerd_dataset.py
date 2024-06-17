@@ -143,7 +143,7 @@ class EbnerdDataset(Dataset):
         entities_list = self.article_df[DEFAULT_ENTITIES_COL].to_list()
         placeholder = ['[UNK]']  
         prepared_entities = [ent if ent else placeholder for ent in entities_list]
-        print(prepared_entities)
+        # print(prepared_entities)
         encoding = transformer_tokenizer(prepared_entities, return_tensors='pt', padding='longest', truncation=True, is_split_into_words =True, max_length=max_entity_length)
         entities_word_ids = encoding['input_ids']
 

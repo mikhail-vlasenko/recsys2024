@@ -1,4 +1,5 @@
-from typing import Any, Dict, Tuple, Union
+from typing import Any, Dict, Tuple, Union, Optional
+from typing_extensions import Self
 
 import torch
 import torch.nn.functional as F
@@ -182,3 +183,9 @@ class OriginalModule(LightningModule):
             self.net.parameters(), lr=self.hparams.args.lr, weight_decay=self.hparams.args.l2_weight
         )
         return {"optimizer": optimizer}
+
+    def to(self, *args: Any, **kwargs: Any) -> Self:
+        super().to(*args, **kwargs)
+        # idk why but pl doesn't call it like that
+        self.net.to(*args, **kwargs)
+        return self

@@ -250,7 +250,3 @@ class Model(nn.Module):
         super().to(*args, **kwargs)
         for layer in self.routers:
             layer.to(*args, **kwargs)
-            if hasattr(layer, 'fc1'):
-                layer.fc1.to(*args, **kwargs)
-            if hasattr(layer, 'fc2'):
-                layer.fc2.to(*args, **kwargs)
