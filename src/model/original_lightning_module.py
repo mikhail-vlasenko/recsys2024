@@ -62,7 +62,7 @@ class OriginalModule(LightningModule):
                     lst,
                     desc=f"Converting to torch (needs {max_len * len(lst) * 4 / 1024 / 1024:.2f} MB on {device})"
             ):
-                pad = (0, max_len - len(l))  # pad 0 on the left and to max_len on the right
+                pad = (0, max_len - len(l))  #pad 0 on the left and to max_len on the right
                 tensors.append(F.pad(torch.tensor(l, dtype=torch.int32, device=device), pad, value=pad_value))
             return torch.stack(tensors)
 
@@ -80,14 +80,12 @@ class OriginalModule(LightningModule):
         elif mode == "val":
             assert False, "Val mode not implemented"
         elif mode == "test":
-            #throw an error
             assert False, "Test mode not implemented"
 
-        #this if statement is the wrong way arround because for some reason that arg is broken
-        if not self.hparams.args.optimized_subsampling:
-            user_news, news_user = random_neighbor(self.hparams.args, user_news, news_user, self.n_news)
-        else:
+        if self.hparams.args.optimized_subsampling:
             user_news, news_user = optimized_random_neighbor(self.hparams.args, user_news, news_user, self.user_lengths, self.news_lengths)
+        else:
+            user_news, news_user = random_neighbor(self.hparams.args, user_news, news_user, self.n_news)
 
         user_news, news_user = torch.tensor(user_news, dtype=torch.long).to(self.device), torch.tensor(
                 news_user, dtype=torch.long).to(self.device)

@@ -66,7 +66,7 @@ class OriginalModelDatamodule(LightningDataModule):
             batch_size=self.batch_size_per_device,
             num_workers=self.hparams.num_workers,
             pin_memory=self.hparams.pin_memory,
-            drop_last=True,
+            drop_last=True,  #code breaks if last isnt dropped 
             shuffle=True,
         )
 
@@ -80,7 +80,7 @@ class OriginalModelDatamodule(LightningDataModule):
             batch_size=self.batch_size_per_device,
             num_workers=self.hparams.num_workers,
             pin_memory=self.hparams.pin_memory,
-            drop_last=True,
+            drop_last=True,  #code breaks if last isnt dropped 
             shuffle=False,
         )
 
@@ -94,7 +94,7 @@ class OriginalModelDatamodule(LightningDataModule):
             batch_size=self.batch_size_per_device,
             num_workers=self.hparams.num_workers,
             pin_memory=self.hparams.pin_memory,
-            drop_last=True, #code breaks if last isnt drop 
+            drop_last=True, #code breaks if last isnt dropped 
             shuffle=False,
         )
 
