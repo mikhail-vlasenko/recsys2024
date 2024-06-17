@@ -113,7 +113,7 @@ class EbnerdDataset(Dataset):
         article_id_to_index[np.nan] = np.nan
 
         self.df_behaviors = self.df_behaviors.with_columns(
-            pl.col(DEFAULT_ARTICLE_ID_COL).apply(lambda article_id: article_id_to_index[int(article_id)]).alias(DEFAULT_ARTICLE_ID_COL)
+            pl.col(DEFAULT_INVIEW_ARTICLES_COL).apply(lambda article_id: article_id_to_index[int(article_id)]).alias(DEFAULT_INVIEW_ARTICLES_COL)
         )
         self.df_behaviors = self.df_behaviors.with_columns(
             pl.col(DEFAULT_INVIEW_ARTICLES_COL).apply(
