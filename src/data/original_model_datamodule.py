@@ -51,9 +51,9 @@ class OriginalModelDatamodule(LightningDataModule):
         # load and split datasets only if not loaded already
         if not self.data_train and not self.data_val and not self.data_test:
             self.data_train: Optional[EbnerdDataset] = EbnerdDataset(root_dir=self.hparams.root_dir, data_split=self.data_split, mode="train", 
-                                                                     history_size=self.hparams.history_size, fraction=self.hparams.fraction, npration=self.hparams.npratio)
+                                                                     history_size=self.hparams.history_size, fraction=self.hparams.fraction, npratio=self.hparams.npratio)
             self.data_val: Optional[EbnerdDataset] = EbnerdDataset(root_dir=self.hparams.root_dir, data_split=self.data_split, mode="validation", 
-                                                                   history_size=self.hparams.history_size, fraction=self.hparams.fraction, npration=self.hparams.npratio)
+                                                                   history_size=self.hparams.history_size, fraction=self.hparams.fraction, npratio=self.hparams.npratio)
             #self.data_test: Optional[EbnerdDataset] = EbnerdDataset(root_dir=self.hparams.root_dir, data_split=self.data_split, mode="test")
 
     def train_dataloader(self) -> DataLoader[Any]:
