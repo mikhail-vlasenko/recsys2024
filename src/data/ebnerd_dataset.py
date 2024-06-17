@@ -69,20 +69,10 @@ class EbnerdDataset(Dataset):
         self.compress_article_ids()
         assert max(self.df_behaviors[DEFAULT_USER_COL]) + 1 == len(self.df_behaviors[DEFAULT_USER_COL].unique()), "User ids are not continuous"
 
-        self.unknown_representation = "zeros"
-
-        #preprocess the articles into embedding vectors
-        #self.embedded_articles, self.article_mapping = self.preprocess_articles(articles)
-
-        #something idk
-        #self.lookup_article_index, self.lookup_article_matrix = create_lookup_objects(
-        #    self.article_mapping, unknown_representation=self.unknown_representation
-        #)
-
     def __len__(self):
         return len(self.df_behaviors)
     
-    def __getitem__(self, idx) -> tuple[tuple[np.ndarray], np.ndarray]:
+    def __getitem__(self, idx) -> tuple[int, int, int]:
         row = self.df_behaviors.slice(idx, 1)
 
         # Get the required columns 
@@ -125,7 +115,7 @@ class EbnerdDataset(Dataset):
     def get_n_users(self) -> int:
         return len(self.df_behaviors[DEFAULT_USER_COL])
     
-    def get_word_ids(self, max_title_length, max_entity_length, max_group_length) -> Tensor:
+    def get_word_ids(self, max_title_length, max_entity_length, max_group_length):
         '''
         Return ids for the words in the title, the entity groups and the named entities in the text.
         To follow the original paper, named entities are encoded as words using the same ids as the words in the title,
@@ -182,7 +172,7 @@ class EbnerdDataset(Dataset):
         return [
             (tokens := [word_dict.get(word, word_dict['[PAD]']) for word in text])[:max_length] +
             [word_dict['[PAD]']] * (max_length - len(tokens))
-            if text else [word_dict['[PAD]']] * max_length  # Handle empty lists with full padding
+            if text else [word_dict['[PAD]']] * max_length  #handle empty lists with full padding
             for text in texts
         ]
     
@@ -199,30 +189,8 @@ class EbnerdDataset(Dataset):
                 user_news[user_id].append(news_id)
 
         return user_news, news_user
-    
-    def preprocess_articles(self, df_articles: pl.DataFrame) -> pl.DataFrame:
-        TRANSFORMER_MODEL_NAME = "FacebookAI/xlm-roberta-base"
-        # this should be changed probably to be a parameter
-        TEXT_COLUMNS_TO_USE = [DEFAULT_TITLE_COL, DEFAULT_ENTITIES_COL, DEFAULT_NER_COL] 
-        MAX_TITLE_LENGTH = 30
 
-        # LOAD HUGGINGFACE:
-        #transformer_model = AutoModel.from_pretrained(TRANSFORMER_MODEL_NAME)
-        transformer_tokenizer = AutoTokenizer.from_pretrained(TRANSFORMER_MODEL_NAME)
-
-        df_articles, cat_cal = concat_str_columns(df_articles, columns=TEXT_COLUMNS_TO_USE)
-        df_articles, token_col_title = convert_text2encoding_with_transformers(
-            df_articles, transformer_tokenizer, cat_cal, max_length=MAX_TITLE_LENGTH
-        )
-
-        # =>
-        article_mapping = create_article_id_to_value_mapping(
-            df=df_articles, value_col=token_col_title
-        )
-
-        return df_articles, article_mapping
-
-    def ebnerd_from_path(self, path: Path, mode: str, data_split, seed, history_size: int = 30, fraction = 1) -> pl.DataFrame:
+    def ebnerd_from_path(self, path: Path, mode: str, data_split, seed, npratio, history_size: int = 30, fraction = 1) -> tuple[pl.DataFrame, pl.LazyFrame, pl.DataFrame]:
         """
         Load ebnerd - function
         # I could add something here to select columns but I dont think its necessary for now, makes more sense to do in the loader overwrite
@@ -270,7 +238,7 @@ class EbnerdDataset(Dataset):
                 df_behaviors = (df_behaviors
                     .pipe(
                         sampling_strategy_wu2019,
-                        npratio=4,
+                        npratio=npratio,
                         shuffle=True,
                         with_replacement=True,
                         seed=123,

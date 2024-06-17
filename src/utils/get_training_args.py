@@ -50,9 +50,13 @@ def get_training_args():
     parser.add_argument('--dropout_rate', type=float, default=0.3, help='dropout rate')
     parser.add_argument('--seed', type=int, default=0, help='random seed')
     parser.add_argument('--optimized_subsampling', action='store_true')
-    parser.add_argument('--more_labels', action='store_false', default=True)
     parser.set_defaults(optimized_subsampling=False)
 
+    parser.add_argument('--more_labels', action='store_false', default=True)
+    parser.add_argument('--history_size', type=int, default=30, help=' The maximum size of the history to retain')
+    parser.add_argument('--fraction', type=float, default=1.0, help='fraction of data to use for the behaviors df, number applies to both train, test and val')
+    parser.add_argument('--npratio', type=int, default=4, help='The ratio of negative article ids to positive article ids in train and val data')
+    
     show_loss = True
     show_time = False
 
