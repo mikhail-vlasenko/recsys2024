@@ -192,13 +192,13 @@ class EbnerdDataset(Dataset):
         news_user = [[] for _ in range(self.num_articles)]
         user_news = [[] for _ in range(self.num_users)]
         for row in self.df_behaviors.rows(named=True):
-            news_ids = row[DEFAULT_INVIEW_ARTICLES_COL]
+            news_id = row[DEFAULT_INVIEW_ARTICLES_COL]
             user_id = row[DEFAULT_USER_COL]
-            for news_id in news_ids:
-                if user_id not in news_user[news_id]:
-                    news_user[news_id].append(user_id)
-                if news_id not in user_news[user_id]:
-                    user_news[user_id].append(news_id)
+
+            if user_id not in news_user[news_id]:
+                news_user[news_id].append(user_id)
+            if news_id not in user_news[user_id]:
+                user_news[user_id].append(news_id)
 
         return user_news, news_user
     
