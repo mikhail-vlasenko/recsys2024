@@ -87,8 +87,8 @@ class EbnerdDataset(Dataset):
 
         # Get the required columns 
         user_id = row['user_id'][0] #DEFAULT_USER_COL = "user_id"
-        article_ids_clicked = row['article_ids_inview'][0][0] #DEFAULT_INVIEW_ARTICLES_COL
-        labels = row['labels'][0][0] #DEFAULT_LABELS_COL
+        article_ids_clicked = row['article_ids_inview'][0] #DEFAULT_INVIEW_ARTICLES_COL
+        labels = row['labels'][0] #DEFAULT_LABELS_COL
 
         # Return the tuple
         #print(article_ids_clicked)
@@ -239,7 +239,7 @@ class EbnerdDataset(Dataset):
 
         data_pkl_path = Path('data') / f'{mode}_seed_{seed}.pkl'
 
-        if os.path.exists(data_pkl_path):
+        if not os.path.exists(data_pkl_path):
             with open(data_pkl_path, 'rb') as f:
                 (df_behaviors, df_history, df_articles) = pickle.load(f)
 
@@ -287,7 +287,7 @@ class EbnerdDataset(Dataset):
                 )
 
             #unroll the inview column as rows into the dataframe 
-            df_behaviors = df_behaviors.explode('article_ids_inview')
+            df_behaviors = df_behaviors.explode('article_ids_inview','labels')
 
             #also load article data 
             df_articles = pl.read_parquet(article_path)
