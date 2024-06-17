@@ -50,6 +50,7 @@ def get_training_args():
     parser.add_argument('--dropout_rate', type=float, default=0.3, help='dropout rate')
     parser.add_argument('--seed', type=int, default=0, help='random seed')
     parser.add_argument('--optimized_subsampling', action='store_true')
+    parser.add_argument('--more_labels', action='store_false', default=True)
     parser.set_defaults(optimized_subsampling=False)
 
     show_loss = True
