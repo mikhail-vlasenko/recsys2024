@@ -73,7 +73,7 @@ class EbnerdDataset(Dataset):
         return len(self.df_behaviors)
     
     def __getitem__(self, idx) -> tuple[int, int, int]:
-        row = self.df_behaviors.row(named=True)
+        row = self.df_behaviors.row(named=True, index=idx)
 
         # Get the required columns 
         user_id = row['user_id'][0] #DEFAULT_USER_COL = "user_id"
