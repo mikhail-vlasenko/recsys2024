@@ -157,9 +157,9 @@ class OriginalModule(LightningModule):
         f1 = self.f1(scores, labels)
         roc_auc = self.auc(scores, labels)
 
-        self.log("val/loss", loss, on_step=True, on_epoch=True, prog_bar=True, logger=True)
-        self.log("val/f1", f1, on_step=True, on_epoch=True, prog_bar=True, logger=True)
-        self.log("val/roc_auc", roc_auc, on_step=True, on_epoch=True, prog_bar=True, logger=True)
+        self.log("val/loss", loss, on_epoch=True, prog_bar=True, logger=True)
+        self.log("val/f1", f1, on_epoch=True, prog_bar=True, logger=True)
+        self.log("val/roc_auc", roc_auc, on_epoch=True, prog_bar=True, logger=True)
 
         return loss, f1, roc_auc
 
@@ -172,9 +172,9 @@ class OriginalModule(LightningModule):
         f1 = self.f1(scores, labels)
         roc_auc = self.auc(scores, labels)
 
-        self.log("test/loss", loss, on_step=True, on_epoch=True, prog_bar=True, logger=True)
-        self.log("test/f1", f1, on_step=True, on_epoch=True, prog_bar=True, logger=True)
-        self.log("test/roc_auc", roc_auc, on_step=True, on_epoch=True, prog_bar=True, logger=True)
+        self.log("test/loss", loss, on_epoch=True, prog_bar=True, logger=True)
+        self.log("test/f1", f1, on_epoch=True, prog_bar=True, logger=True)
+        self.log("test/roc_auc", roc_auc, on_epoch=True, prog_bar=True, logger=True)
 
         return loss, f1, roc_auc
 
