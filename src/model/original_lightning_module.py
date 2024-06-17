@@ -17,6 +17,8 @@ class OriginalModule(LightningModule):
         compile: bool,
         train_user_news,
         train_news_user,
+        val_user_news,
+        val_news_user,
         n_news,
         args: bool
     ) -> None:
@@ -43,14 +45,16 @@ class OriginalModule(LightningModule):
 
         if args.optimized_subsampling:
             print("args.optimized_subsampling:", args.optimized_subsampling)
-            self.pre_load_neighbors()
+            self.train_user_news, self.train_news_user = self.pre_load_neighbors(train_user_news, train_news_user)
+            self.val_user_news, self.val_news_user = self.pre_load_neighbors(val_user_news, val_news_user)
+
 
         self.net = self.net.to(self.device)
         
 
-    def pre_load_neighbors(self):
-        user_lengths = torch.tensor([len(self.train_user_news[i]) for i in range(len(self.train_user_news))]).unsqueeze(1)#.to(device)
-        news_lengths = torch.tensor([len(self.train_news_user[i]) for i in range(len(self.train_news_user))]).unsqueeze(1)#.to(device)
+    def pre_load_neighbors(self, user_news, news_user):
+        user_lengths = torch.tensor([len(user_news[i]) for i in range(len(user_news))]).unsqueeze(1)#.to(device)
+        news_lengths = torch.tensor([len(news_user[i]) for i in range(len(news_user))]).unsqueeze(1)#.to(device)
         self.user_lengths = user_lengths
         self.news_lengths = news_lengths
 
@@ -65,16 +69,20 @@ class OriginalModule(LightningModule):
             return torch.stack(tensors)
 
         dense_matrix_device = torch.device("cpu")
-        self.train_user_news = list_of_lists_to_torch(self.train_user_news, 0, user_lengths.max().item(), dense_matrix_device)
-        self.train_news_user = list_of_lists_to_torch(self.train_news_user, 0, news_lengths.max().item(), dense_matrix_device)
-
+        user_news = list_of_lists_to_torch(user_news, 0, user_lengths.max().item(), dense_matrix_device)
+        news_user = list_of_lists_to_torch(news_user, 0, news_lengths.max().item(), dense_matrix_device)
+        return user_news, news_user
 
     def load_batch(self, batch, mode="train"):
         user_id, article_index, labels = batch
         
-        assert mode == "train"
         if mode == "train":
             user_news, news_user = self.train_user_news, self.train_news_user
+        elif mode == "val":
+            user_news, news_user = self.val_user_news, self.val_news_user
+        elif mode == "test":
+            #throw an error
+            assert False, "Test mode not implemented"
 
         #this if statement is the wrong way arround because for some reason that arg is broken 
         if not self.hparams.args.optimized_subsampling:

@@ -129,46 +129,59 @@ class EbnerdDataset(Dataset):
         return len(self.df_behaviors[DEFAULT_USER_COL])
     
     def get_word_ids(self, max_title_length, max_entity_length, max_group_length) -> Tensor:
+        '''
+        Return ids for the words in the title, the entity groups and the named entities in the text.
+        To follow the original paper, named entities are encoded as words using the same ids as the words in the title,
+        while the entity groups are tokenized separately.
+        
+        For the title use 
+        DEFAULT_TITLE_COL = "title" -> "Hanks beskyldt…"
+        For the entity groups use
+        DEFAULT_ENTITIES_COL = "entity_groups" -> ["PER"]
+        for the named entities use
+        DEFAULT_NER_COL = "ner_clusters" -> ["David Gardner"]
+        '''
         print("getting word ids")
         #intialize the tokenizer
         TRANSFORMER_MODEL_NAME = "FacebookAI/xlm-roberta-base"
-        TEXT_COLUMNS_TO_USE = [DEFAULT_TITLE_COL, DEFAULT_ENTITIES_COL, DEFAULT_NER_COL]
 
         transformer_tokenizer = AutoTokenizer.from_pretrained(TRANSFORMER_MODEL_NAME)
 
         #encode the titles 
         titles_list= self.article_df[DEFAULT_TITLE_COL].to_list()
-        # print(titles_list)
         encoding = transformer_tokenizer(titles_list, return_tensors='pt', padding='max_length', max_length=max_title_length, truncation=True)
         title_word_ids = encoding['input_ids']
 
-        #encode the enities
+        #encode the named entities
         entities_list = self.article_df[DEFAULT_ENTITIES_COL].to_list()
         placeholder = ['[UNK]']  
         prepared_entities = [ent if ent else placeholder for ent in entities_list]
-        # print(prepared_entities)
+        print(prepared_entities)
         encoding = transformer_tokenizer(prepared_entities, return_tensors='pt', padding='longest', truncation=True, is_split_into_words =True, max_length=max_entity_length)
         entities_word_ids = encoding['input_ids']
 
-        #encode the ner
-        # todo: whats ner?
-        ner_list = self.article_df[DEFAULT_NER_COL].to_list()
-        ner_dict = self.build_dictionary(ner_list)
-        ner_word_ids = self.tokenize_texts(ner_list, ner_dict, max_group_length)
+        #encode the entity groups
+        entity_group_list = self.article_df[DEFAULT_ENTITIES_COL].to_list()
+        entity_group_dict = self.build_dictionary(entity_group_list)
+        ner_word_ids = self.texts_to_id(entity_group_list, entity_group_dict, max_group_length)
 
         return title_word_ids, entities_word_ids, ner_word_ids
     
-    def build_dictionary(self, texts):
+    def build_dictionary(self, texts: list[list[str]]):
+        """
+        Build a dictionary from a list of lists of words.
+        The dictionary maps each word to a unique integer.
+        """
         unique_words = set()
         for text in tqdm(texts):
-            unique_words.update(text)  # Assuming text is a list of words
-        word_dict = {'[PAD]': 0}  # Initialize with padding token
+            unique_words.update(text)
+        word_dict = {'[PAD]': 0} 
         for word in tqdm(unique_words):
-            if word not in word_dict:  # This check prevents overwriting existing tokens
+            if word not in word_dict:
                 word_dict[word] = len(word_dict)
         return word_dict
 
-    def tokenize_texts(self, texts, word_dict, max_length):
+    def texts_to_id(self, texts: list[list[str]], word_dict: dict, max_length: int):
         return [
             (tokens := [word_dict.get(word, word_dict['[PAD]']) for word in text])[:max_length] +
             [word_dict['[PAD]']] * (max_length - len(tokens))

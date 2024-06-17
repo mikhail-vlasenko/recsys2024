@@ -33,15 +33,6 @@ def main():
         max_title_length=args.title_len, max_entity_length=40, max_group_length=40
     )
 
-    # i dont know what "ner" is in the get_word_ids function,
-    # but the news_group are almost certainly the embedding table to go from a news id
-    # to a list of ids of a group for every entity in the article
-    # in the original code, there are very few groups, namely, 12
-
-    # i have no idea currently how to split our entities (which are all words i think) into proper groups
-    # so lets fill it with zeros for now
-    news_group = [[0] * len(news_entity[0]) for _ in range(len(news_entity))]
-
     n_users = datamodule.data_train.get_n_users()
     n_news = len(news_title)
     train_user_news, train_news_user = datamodule.data_train.preprocess_neighbors()
