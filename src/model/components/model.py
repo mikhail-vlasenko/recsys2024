@@ -116,8 +116,6 @@ class Model(nn.Module):
         user = [user_seeds]
         news_vectors = []
         user_vectors = []
-        n = self.news_neighbor
-        u = self.user_neighbor
 
         news_hop_vectors = self.convolution(news[0]).reshape(-1, self.cnn_out_size)
         news_hop_vectors = F.relu(self.item_transform(news_hop_vectors))
@@ -132,7 +130,7 @@ class Model(nn.Module):
         user.append(user_neighbors)
 
         if self.n_iter >= 1:
-            news_hop_vectors = self.user_emb_matrix(news[1][:, :u]).reshape(-1, self.user_dim)
+            news_hop_vectors = self.user_emb_matrix(news[1]).reshape(-1, self.user_dim)
             news_hop_vectors = F.relu(self.user_transform(news_hop_vectors))
             news_hop_vectors = news_hop_vectors.reshape(self.batch_size, -1, self.dim)
             news_neighbors = user_news[news[1]].view(self.batch_size, -1)
@@ -210,6 +208,7 @@ class Model(nn.Module):
                 user_vectors[0].reshape(self.batch_size, out_caps, self.nhidden))
 
     def convolution(self, inputs):
+        # convolution is only done on news nodes
         title_lookup = F.embedding(inputs, self.title).reshape(-1, self.title_len)
         title_embed = self.word_emb_matrix(title_lookup).unsqueeze(-1)
 

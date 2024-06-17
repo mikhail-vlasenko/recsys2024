@@ -15,6 +15,9 @@ class OriginalModelDatamodule(LightningDataModule):
         batch_size: int = 64,
         num_workers: int = 1,
         pin_memory: bool = False,
+        history_size: int = 30,
+        fraction: float = 1.0,
+        npratio: int = 4,
     ) -> None:
         super().__init__()
     
@@ -24,9 +27,9 @@ class OriginalModelDatamodule(LightningDataModule):
         self.data_split = data_download_path.split("/")[-1].split(".")[0]
 
         # data transformations
-        self.data_train: Optional[Dataset] = None
-        self.data_val: Optional[Dataset] = None
-        self.data_test: Optional[Dataset] = None
+        self.data_train: Optional[EbnerdDataset] = None
+        self.data_val: Optional[EbnerdDataset] = None
+        self.data_test: Optional[EbnerdDataset] = None
 
         self.batch_size_per_device = batch_size
     
@@ -47,9 +50,11 @@ class OriginalModelDatamodule(LightningDataModule):
 
         # load and split datasets only if not loaded already
         if not self.data_train and not self.data_val and not self.data_test:
-            self.data_train: Optional[Dataset] = EbnerdDataset(root_dir=self.hparams.root_dir, data_split=self.data_split, mode="train")
-            self.data_val: Optional[Dataset] = EbnerdDataset(root_dir=self.hparams.root_dir, data_split=self.data_split, mode="validation")
-            self.data_test: Optional[Dataset] = EbnerdDataset(root_dir=self.hparams.root_dir, data_split=self.data_split, mode="test")
+            self.data_train: Optional[EbnerdDataset] = EbnerdDataset(root_dir=self.hparams.root_dir, data_split=self.data_split, mode="train", 
+                                                                     history_size=self.hparams.history_size, fraction=self.hparams.fraction, npratio=self.hparams.npratio)
+            self.data_val: Optional[EbnerdDataset] = EbnerdDataset(root_dir=self.hparams.root_dir, data_split=self.data_split, mode="validation", 
+                                                                   history_size=self.hparams.history_size, fraction=self.hparams.fraction, npratio=self.hparams.npratio)
+            #self.data_test: Optional[EbnerdDataset] = EbnerdDataset(root_dir=self.hparams.root_dir, data_split=self.data_split, mode="test")
 
     def train_dataloader(self) -> DataLoader[Any]:
         """Create and return the train dataloader.
@@ -61,6 +66,7 @@ class OriginalModelDatamodule(LightningDataModule):
             batch_size=self.batch_size_per_device,
             num_workers=self.hparams.num_workers,
             pin_memory=self.hparams.pin_memory,
+            drop_last=True,  #code breaks if last isnt dropped 
             shuffle=True,
         )
 
@@ -69,11 +75,12 @@ class OriginalModelDatamodule(LightningDataModule):
 
         :return: The validation dataloader.
         """
-        return NewsrecDataLoader(
+        return DataLoader(
             dataset=self.data_val,
             batch_size=self.batch_size_per_device,
             num_workers=self.hparams.num_workers,
             pin_memory=self.hparams.pin_memory,
+            drop_last=True,  #code breaks if last isnt dropped 
             shuffle=False,
         )
 
@@ -82,11 +89,12 @@ class OriginalModelDatamodule(LightningDataModule):
 
         :return: The test dataloader.
         """
-        return NewsrecDataLoader(
-            dataset=self.data_test,
+        return DataLoader(
+            dataset=self.data_val, #TODO change to test 
             batch_size=self.batch_size_per_device,
             num_workers=self.hparams.num_workers,
             pin_memory=self.hparams.pin_memory,
+            drop_last=True, #code breaks if last isnt dropped 
             shuffle=False,
         )
 

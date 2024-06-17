@@ -21,7 +21,7 @@ class EbnerdVariants(Enum):
 
     EbnerdLarge = ImageNetVariant(
         name="ebnerd_large",
-        path="https://ebnerd-dataset.s3.eu-west1.amazonaws.com/ebnerd_large.zip"
+        path="https://huggingface.co/datasets/recsys2024/ebnerd/resolve/main/ebnerd_large.zip?download=true"
     )
 
     EbnerdLargeArticles = ImageNetVariant(

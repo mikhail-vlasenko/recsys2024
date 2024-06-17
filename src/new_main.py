@@ -15,6 +15,9 @@ from src.model.original_lightning_module import OriginalModule
 from src.model.components.model import Model
 from transformers import BertTokenizer, BertModel
 
+device_name = "cuda" if torch.cuda.is_available() else "cpu"
+device = torch.device(device_name)
+
 
 def main():
     args = get_training_args()
@@ -23,27 +26,39 @@ def main():
 
     data_download_path = EbnerdVariants.init_variant(args.ebnerd_variant).value.path
 
-    datamodule = OriginalModelDatamodule(data_download_path=data_download_path, batch_size=args.batch_size, num_workers=args.num_workers, api_key=args.api_key)
+    datamodule = OriginalModelDatamodule(data_download_path=data_download_path, batch_size=args.batch_size, num_workers=args.num_workers, 
+                                         api_key=args.api_key, history_size=args.history_size, fraction=args.fraction, npratio=args.npratio)
+
     datamodule.setup()
-    news_title, news_entity, news_group = datamodule.data_train.get_word_ids(max_title_length=args.title_len)
+    news_title, news_entity, news_group = datamodule.data_train.get_word_ids(
+        max_title_length=args.title_len, max_entity_length=40, max_group_length=40
+    )
+
     n_users = datamodule.data_train.get_n_users()
+    n_news = len(news_title)
+    train_user_news, train_news_user = datamodule.data_train.preprocess_neighbors()
     #datamodule.data_train.__getitem__()
     
+    net = Model(
+        args,
+        torch.tensor(news_title).to(device),
+        torch.tensor(news_entity).to(device),
+        torch.tensor(news_group).to(device),
+        n_users,
+        len(news_title)
+    )
 
-    net = Model(args, torch.tensor(news_title), torch.tensor(news_entity), torch.tensor(news_group), n_users, len(news_title))
-
-    module = OriginalModule(net, torch.optim.Adam, torch.optim.lr_scheduler.StepLR, compile=True)
-
+    module = OriginalModule(net, args=args, train_user_news=train_user_news, train_news_user=train_news_user, n_news=n_news)
     checkpoint_filename = f"{args.ebnerd_variant}-original-model"
     checkpoint_callback = ModelCheckpoint(
         dirpath="checkpoints/",
         filename=checkpoint_filename + "-{epoch}-{val_loss:.2f}",
-        monitor="val_loss",
+        monitor="val/loss",
         mode="min",
     )
 
     wandb_logger = WandbLogger(
-        entity="inverse-rl", project="RecSys", name=checkpoint_filename
+        entity="inverse_rl", project="RecSys", name=checkpoint_filename
     )
 
     wandb_logger.watch(module, log="all")
@@ -51,12 +66,10 @@ def main():
     callbacks = [checkpoint_callback]
 
     trainer_args = {
-        "max_time": {"hours": int(args.max_hours_per_run) - 1},
-        "max_epochs": args.n_epochs_per_cycle,
         "callbacks": callbacks,
         "enable_checkpointing": True,
-        "logger": wandb_logger if args.logger and not args.test_mode else None,
-        "accelerator": "gpu" if torch.cuda.is_available() else "cpu",
+        "logger": wandb_logger,
+        "accelerator": device_name,
         "devices": "auto"
     }
 
