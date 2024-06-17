@@ -117,7 +117,7 @@ class EbnerdDataset(Dataset):
         )
         self.df_behaviors = self.df_behaviors.with_columns(
             pl.col(DEFAULT_INVIEW_ARTICLES_COL).apply(
-                lambda article_id: [article_id_to_index[int(article_id)]]
+                lambda article_id: article_id_to_index[int(article_id)]
             ).alias(DEFAULT_INVIEW_ARTICLES_COL)
         )
         self.article_df = self.article_df.with_columns(
@@ -194,7 +194,7 @@ class EbnerdDataset(Dataset):
         for row in self.df_behaviors.rows(named=True):
             news_id = row[DEFAULT_INVIEW_ARTICLES_COL]
             user_id = row[DEFAULT_USER_COL]
-
+        
             if user_id not in news_user[news_id]:
                 news_user[news_id].append(user_id)
             if news_id not in user_news[user_id]:
