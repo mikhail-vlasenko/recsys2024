@@ -117,7 +117,7 @@ class EbnerdDataset(Dataset):
         )
         self.df_behaviors = self.df_behaviors.with_columns(
             pl.col(DEFAULT_INVIEW_ARTICLES_COL).apply(
-                lambda article_ids: [article_id_to_index[int(article_id)] for article_id in article_ids]
+                lambda article_id: [article_id_to_index[int(article_id)]]
             ).alias(DEFAULT_INVIEW_ARTICLES_COL)
         )
         self.article_df = self.article_df.with_columns(
