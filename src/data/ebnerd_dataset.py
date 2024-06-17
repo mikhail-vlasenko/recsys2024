@@ -76,9 +76,9 @@ class EbnerdDataset(Dataset):
         row = self.df_behaviors.row(named=True, index=idx)
 
         # Get the required columns 
-        user_id = row['user_id'][0] #DEFAULT_USER_COL = "user_id"
-        article_ids_clicked = row['article_ids_inview'][0] #DEFAULT_INVIEW_ARTICLES_COL
-        labels = row['labels'][0] #DEFAULT_LABELS_COL
+        user_id = row['user_id'] #DEFAULT_USER_COL = "user_id"
+        article_ids_clicked = row['article_ids_inview'] #DEFAULT_INVIEW_ARTICLES_COL
+        labels = row['labels'] #DEFAULT_LABELS_COL
 
         return user_id, article_ids_clicked, labels
     
