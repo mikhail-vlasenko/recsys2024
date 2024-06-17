@@ -90,8 +90,6 @@ class EbnerdDataset(Dataset):
         article_ids_clicked = row['article_ids_inview'][0] #DEFAULT_INVIEW_ARTICLES_COL
         labels = row['labels'][0] #DEFAULT_LABELS_COL
 
-        # Return the tuple
-        #print(article_ids_clicked)
         return user_id, article_ids_clicked, labels
     
     def compress_user_ids(self):

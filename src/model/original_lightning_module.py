@@ -14,19 +14,12 @@ class OriginalModule(LightningModule):
     def __init__(
         self,
         net: torch.nn.Module,
-        compile: bool,
         train_user_news,
         train_news_user,
         n_news,
         args: bool
     ) -> None:
-        """Initialize a `pl_classifier`.
-
-        :param net: The model to train.
-        :param optimizer: The optimizer to use for training.
-        :param scheduler: The learning rate scheduler to use for training.
-        """
-
+        
         super().__init__()
 
         # this line allows to access init params with 'self.hparams' attribute
@@ -101,12 +94,6 @@ class OriginalModule(LightningModule):
         
         return user_id, article_index, user_news, news_user, labels
 
-    def on_train_start(self) -> None:
-        """Lightning hook that is called when training begins."""
-        # by default lightning executes validation step sanity checks before training starts,
-        # so it's worth to make sure validation metrics don't store results from these checks
-        pass
-
     def compute_loss(self, scores, labels, user_embeddings, news_embeddings):
         total_loss = self.criterion(scores, labels.float())
 
@@ -134,13 +121,15 @@ class OriginalModule(LightningModule):
         return scores, labels
 
     def loss_from_batch(
-            self, batch: Tuple[torch.Tensor, torch.Tensor], ret_scores=False
+            self, batch: Tuple[torch.Tensor, torch.Tensor], mode, ret_scores=False
     ) -> Union[torch.Tensor, Tuple[torch.Tensor, torch.Tensor, torch.Tensor]]:
-        user_indices, news_indices, user_news, news_user, labels = self.load_batch(batch)
+        user_indices, news_indices, user_news, news_user, labels = self.load_batch(batch, mode = mode)
+
         user_embeddings, news_embeddings = self.net(user_indices, news_indices, user_news, news_user)
         user_projected, news_projected = self.net.apply_projection(user_embeddings, news_embeddings)
         scores, labels = self.compute_scores(user_projected, news_projected, user_indices, news_indices, labels)
         loss = self.compute_loss(scores, labels, user_embeddings, news_embeddings)
+
         if ret_scores:
             return loss, scores, labels
         return loss
@@ -161,14 +150,10 @@ class OriginalModule(LightningModule):
         self.log("train/loss", loss, on_step=True, on_epoch=True, prog_bar=True, logger=True)
         return loss
 
-    def on_train_epoch_end(self) -> None:
-        "Lightning hook that is called scores_normalized when a training epoch ends."
-        pass
-
     def validation_step(
         self, batch: Tuple[torch.Tensor, torch.Tensor], batch_idx: int
     ):
-        loss, scores, labels = self.loss_from_batch(batch, ret_scores=True)
+        loss, scores, labels = self.loss_from_batch(batch, mode = "train", ret_scores=True) #TODO change mode to val
 
         f1 = self.f1(scores, labels)
         roc_auc = self.auc(scores, labels)
@@ -188,7 +173,7 @@ class OriginalModule(LightningModule):
             labels.
         :param batch_idx: The index of the current batch.
         """
-        loss, scores, labels = self.loss_from_batch(batch, ret_scores=True)
+        loss, scores, labels = self.loss_from_batch(batch, mode="test", ret_scores=True)
 
         f1 = self.f1(scores, labels)
         roc_auc = self.auc(scores, labels)
