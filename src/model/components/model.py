@@ -85,22 +85,21 @@ class Model(nn.Module):
         newsvec, uservec = self.get_neighbors(news_indices, user_indices, user_news, news_user)
         news_embeddings, user_embeddings = self.aggregate(newsvec, uservec)
 
-        scores = torch.squeeze(self.simple_dot_net(user_embeddings, news_embeddings))
-        scores_normalized = torch.sigmoid(scores)
-        predict_label = (scores > 0.5).int()
+        return user_embeddings, news_embeddings
 
-        return scores, scores_normalized, predict_label, user_embeddings, news_embeddings
+    def get_edge_probability(self, user_embeddings, news_embeddings):
+        scores = torch.squeeze(torch.sum(user_embeddings * news_embeddings, dim=-1))
+        return scores
 
-    def simple_dot_net(self, x, y):
-        x_map = self.last_linear(x[-1].reshape(self.batch_size, -1))
-        y_map = self.last_linear(y[-1].reshape(self.batch_size, -1))
-
-        output = torch.sum(x_map * y_map, dim=-1)
-        return output
+    def apply_projection(self, x, y):
+        x_map = self.last_linear(x.reshape(self.batch_size, -1))
+        y_map = self.last_linear(y.reshape(self.batch_size, -1))
+        return x_map, y_map
 
     def infer_loss(self, x, y):
-        x_class = self.ret_linear(x[-1].reshape(-1, self.nhidden))
-        y_class = self.ret_linear(y[-1].reshape(-1, self.nhidden))
+        # implements equation 8
+        x_class = self.ret_linear(x.reshape(-1, self.nhidden))
+        y_class = self.ret_linear(y.reshape(-1, self.nhidden))
 
         label = torch.eye(self.ret_linear.out_features).repeat(self.batch_size, 1).to(x_class.device)
         user_infer_loss = torch.mean(torch.sum(F.cross_entropy(x_class, label)))
@@ -117,8 +116,6 @@ class Model(nn.Module):
         user = [user_seeds]
         news_vectors = []
         user_vectors = []
-        n = self.news_neighbor
-        u = self.user_neighbor
 
         news_hop_vectors = self.convolution(news[0]).reshape(-1, self.cnn_out_size)
         news_hop_vectors = F.relu(self.item_transform(news_hop_vectors))
@@ -133,7 +130,7 @@ class Model(nn.Module):
         user.append(user_neighbors)
 
         if self.n_iter >= 1:
-            news_hop_vectors = self.user_emb_matrix(news[1][:, :u]).reshape(-1, self.user_dim)
+            news_hop_vectors = self.user_emb_matrix(news[1]).reshape(-1, self.user_dim)
             news_hop_vectors = F.relu(self.user_transform(news_hop_vectors))
             news_hop_vectors = news_hop_vectors.reshape(self.batch_size, -1, self.dim)
             news_neighbors = user_news[news[1]].view(self.batch_size, -1)
@@ -168,9 +165,6 @@ class Model(nn.Module):
     def aggregate(self, news_vectors, user_vectors):
         inp_caps, out_caps = None, self.ncaps
         cur_dim = self.dim
-
-        news = []
-        user = []
 
         for i in range(self.n_iter):
             router = self.routers[i]
@@ -207,13 +201,11 @@ class Model(nn.Module):
             news_vectors = news_vectors_next_iter
             user_vectors = user_vectors_next_iter
 
-            news.append(news_vectors[0].reshape(self.batch_size, out_caps, self.nhidden))
-            user.append(user_vectors[0].reshape(self.batch_size, out_caps, self.nhidden))
-
             cur_dim += out_caps * self.nhidden
             inp_caps, out_caps = out_caps, max(1, out_caps - self.dcaps)
 
-        return news, user
+        return (news_vectors[0].reshape(self.batch_size, out_caps, self.nhidden),
+                user_vectors[0].reshape(self.batch_size, out_caps, self.nhidden))
 
     def convolution(self, inputs):
         # convolution is only done on news nodes
@@ -253,3 +245,8 @@ class Model(nn.Module):
         pool = F.relu(pool)
 
         return pool
+
+    def to(self, *args, **kwargs):
+        super().to(*args, **kwargs)
+        for layer in self.routers:
+            layer.to(*args, **kwargs)
