@@ -17,8 +17,6 @@ class OriginalModule(LightningModule):
         compile: bool,
         train_user_news,
         train_news_user,
-        val_user_news,
-        val_news_user,
         n_news,
         args: bool
     ) -> None:

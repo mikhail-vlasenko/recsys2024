@@ -85,11 +85,10 @@ class EbnerdDataset(Dataset):
     def __getitem__(self, idx) -> tuple[tuple[np.ndarray], np.ndarray]:
         row = self.df_behaviors.slice(idx, 1)
 
-        # Get the required columns and convert them to numpy arrays if needed
-        user_id = row['user_id'][0]
-        # i think we should use DEFAULT_ARTICLE_ID_COL instead
-        article_ids_clicked = row['article_ids_clicked'][-1][0] #idk if this can return more than one element. If so idk how to deal with it. 
-        labels = row['labels'][0][-1]
+        # Get the required columns 
+        user_id = row['user_id'][0] #DEFAULT_USER_COL = "user_id"
+        article_ids_clicked = row['article_ids_inview'][0][0] #DEFAULT_INVIEW_ARTICLES_COL
+        labels = row['labels'][0][0] #DEFAULT_LABELS_COL
 
         # Return the tuple
         #print(article_ids_clicked)
@@ -117,9 +116,9 @@ class EbnerdDataset(Dataset):
             pl.col(DEFAULT_ARTICLE_ID_COL).apply(lambda article_id: article_id_to_index[int(article_id)]).alias(DEFAULT_ARTICLE_ID_COL)
         )
         self.df_behaviors = self.df_behaviors.with_columns(
-            pl.col(DEFAULT_CLICKED_ARTICLES_COL).apply(
+            pl.col(DEFAULT_INVIEW_ARTICLES_COL).apply(
                 lambda article_ids: [article_id_to_index[int(article_id)] for article_id in article_ids]
-            ).alias(DEFAULT_CLICKED_ARTICLES_COL)
+            ).alias(DEFAULT_INVIEW_ARTICLES_COL)
         )
         self.article_df = self.article_df.with_columns(
             pl.col(DEFAULT_ARTICLE_ID_COL).apply(lambda article_id: article_id_to_index[int(article_id)]).alias(DEFAULT_ARTICLE_ID_COL)
@@ -193,7 +192,7 @@ class EbnerdDataset(Dataset):
         news_user = [[] for _ in range(self.num_articles)]
         user_news = [[] for _ in range(self.num_users)]
         for row in self.df_behaviors.rows(named=True):
-            news_ids = row[DEFAULT_CLICKED_ARTICLES_COL]
+            news_ids = row[DEFAULT_INVIEW_ARTICLES_COL]
             user_id = row[DEFAULT_USER_COL]
             for news_id in news_ids:
                 if user_id not in news_user[news_id]:
@@ -286,6 +285,9 @@ class EbnerdDataset(Dataset):
                     .pipe(create_binary_labels_column)
                     .sample(fraction=fraction)
                 )
+
+            #unroll the inview column as rows into the dataframe 
+            df_behaviors = df_behaviors.explode('article_ids_inview')
 
             #also load article data 
             df_articles = pl.read_parquet(article_path)
