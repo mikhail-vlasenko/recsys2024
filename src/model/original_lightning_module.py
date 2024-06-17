@@ -14,10 +14,10 @@ class OriginalModule(LightningModule):
     def __init__(
         self,
         net: torch.nn.Module,
-        train_user_news,
-        train_news_user,
-        n_news,
-        args: bool
+        train_user_news: list[list[int]],
+        train_news_user: list[list[int]],
+        n_news: int,
+        args 
     ) -> None:
         
         super().__init__()
@@ -78,7 +78,7 @@ class OriginalModule(LightningModule):
         if mode == "train":
             user_news, news_user = self.train_user_news, self.train_news_user
         elif mode == "val":
-            user_news, news_user = self.val_user_news, self.val_news_user
+            assert False, "Val mode not implemented"
         elif mode == "test":
             #throw an error
             assert False, "Test mode not implemented"
@@ -121,7 +121,7 @@ class OriginalModule(LightningModule):
         return scores, labels
 
     def loss_from_batch(
-            self, batch: Tuple[torch.Tensor, torch.Tensor], mode, ret_scores=False
+            self, batch: Tuple[torch.Tensor, torch.Tensor], mode: str, ret_scores=False
     ) -> Union[torch.Tensor, Tuple[torch.Tensor, torch.Tensor, torch.Tensor]]:
         user_indices, news_indices, user_news, news_user, labels = self.load_batch(batch, mode = mode)
 
@@ -152,7 +152,7 @@ class OriginalModule(LightningModule):
 
     def validation_step(
         self, batch: Tuple[torch.Tensor, torch.Tensor], batch_idx: int
-    ):
+    ) -> torch.Tensor:
         loss, scores, labels = self.loss_from_batch(batch, mode = "train", ret_scores=True) #TODO change mode to val
 
         f1 = self.f1(scores, labels)
@@ -166,13 +166,8 @@ class OriginalModule(LightningModule):
 
     def test_step(
         self, batch: Tuple[torch.Tensor, torch.Tensor], batch_idx: int
-    ) -> None:
-        """Perform a single test step on a batch of data from the test set.
-
-        :param batch: A batch of data (a tuple) containing the input tensor of images and target
-            labels.
-        :param batch_idx: The index of the current batch.
-        """
+    ) -> torch.Tensor:
+        
         loss, scores, labels = self.loss_from_batch(batch, mode="test", ret_scores=True)
 
         f1 = self.f1(scores, labels)
