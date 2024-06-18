@@ -4,7 +4,7 @@ from typing_extensions import Self
 import torch
 import torch.nn.functional as F
 from lightning import LightningModule
-from torchmetrics import MinMetric, MeanMetric, classification
+from torcheval.metrics import BinaryF1Score, BinaryAUROC
 from src.model.components.model import Model 
 from src.data.data_loader import random_neighbor, optimized_random_neighbor
 import logging
@@ -52,8 +52,8 @@ class OriginalModule(LightningModule):
             self.val_user_news, self.val_news_user = self.pre_load_neighbors(val_user_news, val_news_user)
 
 
-        self.f1 = classification.BinaryF1Score()
-        self.auc = classification.BinaryAUROC()
+        self.f1 = BinaryF1Score()
+        self.auc = BinaryAUROC()
 
         self.more_labels = args.more_labels
 
@@ -173,6 +173,8 @@ class OriginalModule(LightningModule):
         We need to set the model to evaluation mode here. -> swap out the article features to the val ones
         """
         self.net.eval()
+        self.f1.reset()
+        self.auc.reset()
         val_news_title, val_news_entity, val_news_group = self.val_news_title.to(self.device), self.val_news_entity.to(self.device), self.val_news_group.to(self.device)
         self.net.set_article_features(val_news_title, val_news_entity, val_news_group)
 
@@ -182,8 +184,11 @@ class OriginalModule(LightningModule):
     ) -> torch.Tensor:
         loss, scores, labels = self.loss_from_batch(batch, mode = "val", ret_scores=True) #TODO change mode to val
 
-        f1 = self.f1(scores, labels)
-        roc_auc = self.auc(scores, labels)
+        self.f1.update(scores, labels)
+        self.auc.update(scores, labels)
+
+        f1 = self.f1.compute(scores, labels)
+        roc_auc = self.auc.compute(scores, labels)
 
         self.log("val/loss", loss, on_epoch=True, prog_bar=True, logger=True)
         self.log("val/f1", f1, on_epoch=True, prog_bar=True, logger=True)
@@ -191,16 +196,27 @@ class OriginalModule(LightningModule):
 
         return loss, f1, roc_auc
     
-    # TODO implement on_test_start
+    def on_test_start(self) -> None:
+        """Lightning hook that is called when test begins.
+        We need to set the model to evaluation mode here. -> swap out the article features to the test ones
+        """
+        self.net.eval()
+        self.f1.reset()
+        self.auc.reset()
+        test_news_title, test_news_entity, test_news_group = self.test_news_title.to(self.device), self.test_news_entity.to(self.device), self.test_news_group.to(self.device)
+        self.net.set_article_features(test_news_title, test_news_entity, test_news_group)
 
     def test_step(
         self, batch: Tuple[torch.Tensor, torch.Tensor], batch_idx: int
     ) -> torch.Tensor:
         
         loss, scores, labels = self.loss_from_batch(batch, mode="test", ret_scores=True)
+        
+        self.f1.update(scores, labels)
+        self.auc.update(scores, labels)
 
-        f1 = self.f1(scores, labels)
-        roc_auc = self.auc(scores, labels)
+        f1 = self.f1.compute(scores, labels)
+        roc_auc = self.auc.compute(scores, labels)
 
         self.log("test/loss", loss, on_epoch=True, prog_bar=True, logger=True)
         self.log("test/f1", f1, on_epoch=True, prog_bar=True, logger=True)
