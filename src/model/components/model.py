@@ -7,7 +7,7 @@ from src.model.components.aggregators import SumAggregator, ConcatAggregator, Ne
 
 
 class Model(nn.Module):
-    def __init__(self, args, news_title, news_entity, news_group, n_user, n_news):
+    def __init__(self, args, news_title, news_entity, news_group, n_user):
         super(Model, self).__init__()
 
         n_word = 279215
@@ -36,7 +36,6 @@ class Model(nn.Module):
         self.routit = args.routit
 
         self.n_user = n_user
-        self.n_news = n_news
 
         n_group = 12
         word_dim = 50

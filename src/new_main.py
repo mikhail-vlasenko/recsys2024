@@ -44,8 +44,7 @@ def main():
         torch.tensor(news_title).to(device),
         torch.tensor(news_entity).to(device),
         torch.tensor(news_group).to(device),
-        n_users,
-        len(news_title)
+        n_users
     )
 
     module = OriginalModule(net, args=args, train_user_news=train_user_news, train_news_user=train_news_user, n_news=n_news)
