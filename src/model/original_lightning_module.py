@@ -24,7 +24,7 @@ class OriginalModule(LightningModule):
         n_users: int,
         args 
     ) -> None:
-        self.net = net
+        
         super(OriginalModule,self).__init__()
 
         # this line allows to access init params with 'self.hparams' attribute
@@ -39,7 +39,8 @@ class OriginalModule(LightningModule):
         self.train_news_title, self.train_news_entity, self.train_news_group = train_article_features
         self.val_news_title, self.val_news_entity, self.val_news_group = val_article_features
         
-
+        self.net = net
+        
         # loss function
         self.criterion = F.binary_cross_entropy_with_logits
 
