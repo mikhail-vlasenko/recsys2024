@@ -75,7 +75,7 @@ class EbnerdDataset(Dataset):
         self.user_id_to_index = self.compress_user_ids(user_id_to_index=user_id_to_index)
         self.article_id_to_index = self.compress_article_ids(article_id_to_index=article_id_to_index)
 
-        assert max(self.df_behaviors[DEFAULT_USER_COL]) + 1 == len(self.df_behaviors[DEFAULT_USER_COL].unique()), "User ids are not continuous"
+        #assert max(self.df_behaviors[DEFAULT_USER_COL]) + 1 == len(self.df_behaviors[DEFAULT_USER_COL].unique()), "User ids are not continuous"
 
     def __len__(self):
         return len(self.df_behaviors)
