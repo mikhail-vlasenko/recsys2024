@@ -50,7 +50,7 @@ def main():
         torch.tensor(train_news_entity).to(device),
         torch.tensor(train_news_group).to(device),
         n_users
-    ).to(device)
+    )
     #datamodule.data_train.__getitem__()
 
     module = OriginalModule(net=net, args=args, train_user_news=train_user_news, train_news_user=train_news_user,
