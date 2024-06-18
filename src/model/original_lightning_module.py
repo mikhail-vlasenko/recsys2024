@@ -24,7 +24,7 @@ class OriginalModule(LightningModule):
         args 
     ) -> None:
         
-        super().__init__()
+        super(OriginalModule,self).__init__()
 
         # this line allows to access init params with 'self.hparams' attribute
         # also ensures init params will be stored in ckpt
