@@ -46,6 +46,7 @@ class OriginalModule(LightningModule):
             n_users
         )
         print(self.net)
+        self.net = self.net.to(self.device)
 
         # loss function
         self.criterion = F.binary_cross_entropy_with_logits
