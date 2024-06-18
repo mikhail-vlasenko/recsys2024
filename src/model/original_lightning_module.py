@@ -140,6 +140,8 @@ class OriginalModule(LightningModule):
         else:
             scores = self.net.get_edge_probability(user_projected, news_projected)
 
+        return scores, labels
+
 
     def loss_from_batch(
             self, batch: Tuple[torch.Tensor, torch.Tensor], mode: str, ret_scores=False
