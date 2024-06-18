@@ -79,7 +79,8 @@ def main():
         "logger": wandb_logger,
         "accelerator": device_name,
         "devices": "auto",
-        "limit_train_batches": 1
+        "limit_train_batches": 1,
+        "limit_val_batches": 10,
     }
 
     trainer = L.Trainer(**trainer_args)
