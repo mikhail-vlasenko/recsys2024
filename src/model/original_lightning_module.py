@@ -24,6 +24,10 @@ class OriginalModule(LightningModule):
         args 
     ) -> None:
         
+        #set up article features
+        self.train_news_title, self.train_news_entity, self.train_news_group = train_article_features
+        self.val_news_title, self.val_news_entity, self.val_news_group = val_article_features
+        
         self.net = Model(
             args,
             torch.tensor(self.train_news_title).to(self.device),
@@ -42,9 +46,7 @@ class OriginalModule(LightningModule):
         self.val_news_user = val_news_user
         self.val_user_news = val_user_news
         
-        #set up article features
-        self.train_news_title, self.train_news_entity, self.train_news_group = train_article_features
-        self.val_news_title, self.val_news_entity, self.val_news_group = val_article_features
+
 
        
         #self.net = self.net.to(self.device)
