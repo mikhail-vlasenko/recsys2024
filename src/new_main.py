@@ -34,9 +34,9 @@ def main():
         max_title_length=args.title_len, max_entity_length=40, max_group_length=40
     )
 
-    n_users = datamodule.data_train.get_n_users()
-    n_news = len(news_title)
+    n_users = datamodule.train_set.n_users + datamodule.val_set.n_users #+ datamodule.test_set.n_users TODO: add test set
     train_user_news, train_news_user = datamodule.data_train.preprocess_neighbors()
+    val_user_news, val_news_user = datamodule.data_val.preprocess_neighbors()
     #datamodule.data_train.__getitem__()
     
     net = Model(
@@ -47,7 +47,9 @@ def main():
         n_users
     )
 
-    module = OriginalModule(net, args=args, train_user_news=train_user_news, train_news_user=train_news_user, n_news=n_news)
+    module = OriginalModule(net, args=args, train_user_news=train_user_news, train_news_user=train_news_user,
+                            val_user_news=val_user_news, val_news_user=val_news_user) #TODO add test set
+    
     checkpoint_filename = f"{args.ebnerd_variant}-original-model"
     checkpoint_callback = ModelCheckpoint(
         dirpath="checkpoints/",

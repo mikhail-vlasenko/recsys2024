@@ -41,7 +41,7 @@ def load_new_data(args):
         news_title, news_entity, news_group
 
 
-def random_neighbor(args, input_user_news, input_news_user, news_len):
+def random_neighbor(args, input_user_news, input_news_user):
     user_news = np.zeros([len(input_user_news), args.news_neighbor], dtype=np.int32)
     for i in range(len(input_user_news)):
         n_neighbors = len(input_user_news[i])

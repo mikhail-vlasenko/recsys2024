@@ -17,7 +17,8 @@ class OriginalModule(LightningModule):
         net: torch.nn.Module,
         train_user_news: list[list[int]],
         train_news_user: list[list[int]],
-        n_news: int,
+        val_user_news: list[list[int]],
+        val_news_user: list[list[int]],
         args 
     ) -> None:
         
@@ -28,7 +29,6 @@ class OriginalModule(LightningModule):
         self.save_hyperparameters(logger=False)
         self.train_news_user = train_news_user
         self.train_user_news = train_user_news
-        self.n_news = n_news
 
         self.net = net
 
@@ -38,7 +38,7 @@ class OriginalModule(LightningModule):
         if args.optimized_subsampling:
             print("args.optimized_subsampling:", args.optimized_subsampling)
             self.train_user_news, self.train_news_user = self.pre_load_neighbors(train_user_news, train_news_user)
-            #self.val_user_news, self.val_news_user = self.pre_load_neighbors(val_user_news, val_news_user)
+            self.val_user_news, self.val_news_user = self.pre_load_neighbors(val_user_news, val_news_user)
 
 
         self.f1 = classification.BinaryF1Score()
@@ -79,14 +79,14 @@ class OriginalModule(LightningModule):
         if mode == "train":
             user_news, news_user = self.train_user_news, self.train_news_user
         elif mode == "val":
-            assert False, "Val mode not implemented"
+            user_news, news_user = self.val_user_news, self.val_news_user
         elif mode == "test":
             assert False, "Test mode not implemented"
 
         if self.hparams.args.optimized_subsampling:
             user_news, news_user = optimized_random_neighbor(self.hparams.args, user_news, news_user, self.user_lengths, self.news_lengths)
         else:
-            user_news, news_user = random_neighbor(self.hparams.args, user_news, news_user, self.n_news)
+            user_news, news_user = random_neighbor(self.hparams.args, user_news, news_user)
 
         user_news, news_user = torch.tensor(user_news, dtype=torch.long).to(self.device), torch.tensor(
                 news_user, dtype=torch.long).to(self.device)
