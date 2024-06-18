@@ -283,6 +283,7 @@ class EbnerdDataset(Dataset):
                     .pipe(create_binary_labels_column)
                     .sample(fraction=fraction)
                 )
+
             if mode == "test" or mode == "validation":
                 df_behaviors = (df_behaviors
                     .pipe(create_binary_labels_column)
@@ -291,6 +292,9 @@ class EbnerdDataset(Dataset):
 
             #unroll the inview column as rows into the dataframe 
             df_behaviors = df_behaviors.explode('article_ids_inview','labels')
+
+            #print the percentage of positive versus negative labels in the val and train datasets
+            print(f"Percentage of positive labels in {mode} data: {df_behaviors.filter(pl.col('labels') == 1).height / df_behaviors.height}")
 
             #also load article data 
             df_articles = pl.read_parquet(article_path)

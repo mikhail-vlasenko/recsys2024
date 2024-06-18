@@ -187,8 +187,8 @@ class OriginalModule(LightningModule):
         self.f1.update(scores, labels)
         self.auc.update(scores, labels)
 
-        f1 = self.f1.compute(scores, labels)
-        roc_auc = self.auc.compute(scores, labels)
+        f1 = self.f1.compute()
+        roc_auc = self.auc.compute()
 
         self.log("val/loss", loss, on_epoch=True, prog_bar=True, logger=True)
         self.log("val/f1", f1, on_epoch=True, prog_bar=True, logger=True)
@@ -215,8 +215,8 @@ class OriginalModule(LightningModule):
         self.f1.update(scores, labels)
         self.auc.update(scores, labels)
 
-        f1 = self.f1.compute(scores, labels)
-        roc_auc = self.auc.compute(scores, labels)
+        f1 = self.f1.compute()
+        roc_auc = self.auc.compute()
 
         self.log("test/loss", loss, on_epoch=True, prog_bar=True, logger=True)
         self.log("test/f1", f1, on_epoch=True, prog_bar=True, logger=True)
