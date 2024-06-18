@@ -58,9 +58,15 @@ class OriginalModule(LightningModule):
         self.more_labels = args.more_labels
 
         # make a set-based index for edges
-        self.user_edge_index: list[set] = []
+        self.train_user_edge_index: list[set] = []
         for i in range(len(train_user_news)):
             self.user_edge_index.append(set(train_user_news[i]))
+
+        self.val_user_edge_index: list[set] = []
+        for i in range(len(val_user_news)):
+            self.val_user_edge_index.append(set(val_user_news[i]))
+        
+        #TODO add test set
 
     def pre_load_neighbors(self, user_news, news_user):
         user_lengths = torch.tensor([len(user_news[i]) for i in range(len(user_news))]).unsqueeze(1)#.to(device)
@@ -113,13 +119,19 @@ class OriginalModule(LightningModule):
 
         return loss
 
-    def compute_scores(self, user_projected, news_projected, user_indices, news_indices, labels):
+    def compute_scores(self, user_projected, news_projected, user_indices, news_indices, labels, mode):
         if self.more_labels:
+            if mode == "train":
+                user_edge_index = self.train_user_edge_index
+            elif mode == "val":
+                user_edge_index = self.val_user_edge_index
+            else:
+                assert False, "Test mode not implemented"
             # get label matrix using a list of sets for each user
             labels = torch.empty([len(user_indices), len(user_indices)], dtype=torch.float32)
             for i in range(len(user_indices)):
                 for j in range(len(news_indices)):
-                    labels[i, j] = 1 if j in self.user_edge_index[i] else 0
+                    labels[i, j] = 1 if j in user_edge_index[i] else 0
             labels = labels.flatten().to(user_projected.device)
 
             # matmul to get a matrix of similarities
@@ -128,7 +140,6 @@ class OriginalModule(LightningModule):
         else:
             scores = self.net.get_edge_probability(user_projected, news_projected)
 
-        return scores, labels
 
     def loss_from_batch(
             self, batch: Tuple[torch.Tensor, torch.Tensor], mode: str, ret_scores=False
@@ -137,7 +148,7 @@ class OriginalModule(LightningModule):
 
         user_embeddings, news_embeddings = self.net(user_indices, news_indices, user_news, news_user)
         user_projected, news_projected = self.net.apply_projection(user_embeddings, news_embeddings)
-        scores, labels = self.compute_scores(user_projected, news_projected, user_indices, news_indices, labels)
+        scores, labels = self.compute_scores(user_projected, news_projected, user_indices, news_indices, labels, mode=mode)
         loss = self.compute_loss(scores, labels, user_embeddings, news_embeddings)
 
         if ret_scores:
