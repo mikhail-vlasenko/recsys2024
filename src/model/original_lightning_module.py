@@ -30,9 +30,9 @@ class OriginalModule(LightningModule):
         
         self.net = Model(
             args,
-            torch.tensor(self.train_news_title).to(self.device),
-            torch.tensor(self.train_news_entity).to(self.device),
-            torch.tensor(self.train_news_group).to(self.device),
+            torch.tensor(self.train_news_title),
+            torch.tensor(self.train_news_entity),
+            torch.tensor(self.train_news_group),
             n_users
         )
         
