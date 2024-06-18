@@ -38,9 +38,11 @@ class OriginalModule(LightningModule):
         #set up article features
         self.train_news_title, self.train_news_entity, self.train_news_group = train_article_features
         self.val_news_title, self.val_news_entity, self.val_news_group = val_article_features
+        self.train_news_title, self.train_news_entity, self.train_news_group = self.train_news_title.to(self.device), self.train_news_entity.to(self.device), self.train_news_group.to(self.device)
+        self.val_news_title, self.val_news_entity, self.val_news_group = self.val_news_title.to(self.device), self.val_news_entity.to(self.device), self.val_news_group.to(self.device)
         
         self.net = net
-        
+
         # loss function
         self.criterion = F.binary_cross_entropy_with_logits
 

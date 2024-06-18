@@ -54,8 +54,8 @@ def main():
     #datamodule.data_train.__getitem__()
 
     module = OriginalModule(net=net, args=args, train_user_news=train_user_news, train_news_user=train_news_user,
-                            val_user_news=val_user_news, val_news_user=val_news_user, train_article_features=(train_news_title, train_news_entity, train_news_group),
-                            val_article_features=(val_news_title, val_news_entity, val_news_group), n_users=n_users) #TODO add test set
+                            val_user_news=val_user_news, val_news_user=val_news_user, train_article_features=(torch.tensor(train_news_title), torch.tensor(train_news_entity), torch.tensor(train_news_group)),
+                            val_article_features=(torch.tensor(val_news_title), torch.tensor(val_news_entity), torch.tensor(val_news_group)), n_users=n_users) #TODO add test set
     
     checkpoint_filename = f"{args.ebnerd_variant}-original-model"
     checkpoint_callback = ModelCheckpoint(
