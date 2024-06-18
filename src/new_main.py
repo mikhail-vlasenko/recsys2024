@@ -78,7 +78,8 @@ def main():
         "enable_checkpointing": True,
         "logger": wandb_logger,
         "accelerator": device_name,
-        "devices": "auto"
+        "devices": "auto",
+        "limit_train_batches": 1
     }
 
     trainer = L.Trainer(**trainer_args)
