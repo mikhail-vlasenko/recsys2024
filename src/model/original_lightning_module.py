@@ -85,8 +85,8 @@ class OriginalModule(LightningModule):
 
     def load_batch(self, batch, mode="train"):
         user_id, article_index, labels = batch
-        
-        assert mode == "train"
+        #mode='train'
+        #assert mode == "train"
         if mode == "train":
             user_news, news_user = self.train_user_news, self.train_news_user
         elif mode == "val":
@@ -178,7 +178,7 @@ class OriginalModule(LightningModule):
     def validation_step(
         self, batch: Tuple[torch.Tensor, torch.Tensor], batch_idx: int
     ) -> torch.Tensor:
-        loss, scores, labels = self.loss_from_batch(batch, mode = "train", ret_scores=True) #TODO change mode to val
+        loss, scores, labels = self.loss_from_batch(batch, mode = "val", ret_scores=True) #TODO change mode to val
 
         f1 = self.f1(scores, labels)
         roc_auc = self.auc(scores, labels)
