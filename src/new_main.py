@@ -38,7 +38,7 @@ def main():
     )
     # TODO: add test set
     
-    n_users = datamodule.train_set.n_users + datamodule.val_set.n_users #+ datamodule.test_set.n_users TODO: add test set
+    n_users = datamodule.data_train.n_users + datamodule.data_val.n_users #+ datamodule.test_set.n_users TODO: add test set
     train_user_news, train_news_user = datamodule.data_train.preprocess_neighbors()
     val_user_news, val_news_user = datamodule.data_val.preprocess_neighbors()
     #datamodule.data_train.__getitem__()
