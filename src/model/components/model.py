@@ -244,6 +244,11 @@ class Model(nn.Module):
         pool = F.relu(pool)
 
         return pool
+    
+    def set_article_features(self, news_title, news_entity, news_group):
+        self.news_title = news_title
+        self.news_entity = news_entity
+        self.news_group = news_group
 
     def to(self, *args, **kwargs):
         super().to(*args, **kwargs)

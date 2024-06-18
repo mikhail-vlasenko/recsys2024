@@ -5,7 +5,7 @@ import torch
 import torch.nn.functional as F
 from lightning import LightningModule
 from torchmetrics import MinMetric, MeanMetric, classification
-from src.model.components.model import Model as Net
+from src.model.components.model import Model 
 from src.data.data_loader import random_neighbor, optimized_random_neighbor
 import logging
 from tqdm import tqdm
@@ -14,11 +14,13 @@ from tqdm import tqdm
 class OriginalModule(LightningModule):
     def __init__(
         self,
-        net: torch.nn.Module,
         train_user_news: list[list[int]],
         train_news_user: list[list[int]],
         val_user_news: list[list[int]],
         val_news_user: list[list[int]],
+        train_article_features: Tuple[torch.Tensor, torch.Tensor, torch.Tensor],
+        val_article_features: Tuple[torch.Tensor, torch.Tensor, torch.Tensor],
+        n_users: int,
         args 
     ) -> None:
         
@@ -29,8 +31,20 @@ class OriginalModule(LightningModule):
         self.save_hyperparameters(logger=False)
         self.train_news_user = train_news_user
         self.train_user_news = train_user_news
+        self.val_news_user = val_news_user
+        self.val_user_news = val_user_news
+        
+        #set up article features
+        self.train_news_title, self.train_news_entity, self.train_news_group = train_article_features
+        self.val_news_title, self.val_news_entity, self.val_news_group = val_article_features
 
-        self.net = net
+        self.net = Model(
+            args,
+            self.train_news_title,
+            self.train_news_entity,
+            self.train_news_group,
+            n_users
+        )
 
         # loss function
         self.criterion = F.binary_cross_entropy_with_logits
@@ -132,6 +146,13 @@ class OriginalModule(LightningModule):
         if ret_scores:
             return loss, scores, labels
         return loss
+    
+    def on_train_start(self) -> None:
+        """Lightning hook that is called when training begins.
+        We need to set the model to training mode here. -> swap out the article features to the train ones 
+        """  
+        self.net.train()
+        self.net.set_article_features(self.train_news_title, self.train_news_entity, self.train_news_group)
 
     def training_step(
         self, batch: Tuple[torch.Tensor, torch.Tensor], batch_idx: int
@@ -148,6 +169,14 @@ class OriginalModule(LightningModule):
 
         self.log("train/loss", loss, on_step=True, on_epoch=True, prog_bar=True, logger=True)
         return loss
+    
+    def on_validation_start(self) -> None:
+        """Lightning hook that is called when validation begins.
+        We need to set the model to evaluation mode here. -> swap out the article features to the val ones
+        """
+        self.net.eval()
+        self.net.set_article_features(self.val_news_title, self.val_news_entity, self.val_news_group)
+
 
     def validation_step(
         self, batch: Tuple[torch.Tensor, torch.Tensor], batch_idx: int
@@ -162,6 +191,8 @@ class OriginalModule(LightningModule):
         self.log("val/roc_auc", roc_auc, on_epoch=True, prog_bar=True, logger=True)
 
         return loss, f1, roc_auc
+    
+    # TODO implement on_test_start
 
     def test_step(
         self, batch: Tuple[torch.Tensor, torch.Tensor], batch_idx: int

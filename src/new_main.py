@@ -30,25 +30,22 @@ def main():
                                          api_key=args.api_key, history_size=args.history_size, fraction=args.fraction, npratio=args.npratio)
 
     datamodule.setup()
-    news_title, news_entity, news_group = datamodule.data_train.get_word_ids(
+    train_news_title, train_news_entity, train_news_group = datamodule.data_train.get_word_ids(
         max_title_length=args.title_len, max_entity_length=40, max_group_length=40
     )
-
+    val_news_title, val_news_entity, val_news_group = datamodule.data_val.get_word_ids(
+        max_title_length=args.title_len, max_entity_length=40, max_group_length=40
+    )
+    # TODO: add test set
+    
     n_users = datamodule.train_set.n_users + datamodule.val_set.n_users #+ datamodule.test_set.n_users TODO: add test set
     train_user_news, train_news_user = datamodule.data_train.preprocess_neighbors()
     val_user_news, val_news_user = datamodule.data_val.preprocess_neighbors()
     #datamodule.data_train.__getitem__()
-    
-    net = Model(
-        args,
-        torch.tensor(news_title).to(device),
-        torch.tensor(news_entity).to(device),
-        torch.tensor(news_group).to(device),
-        n_users
-    )
 
-    module = OriginalModule(net, args=args, train_user_news=train_user_news, train_news_user=train_news_user,
-                            val_user_news=val_user_news, val_news_user=val_news_user) #TODO add test set
+    module = OriginalModule(args=args, train_user_news=train_user_news, train_news_user=train_news_user,
+                            val_user_news=val_user_news, val_news_user=val_news_user, train_article_features=(train_news_title, train_news_entity, train_news_group),
+                            val_article_features=(val_news_title, val_news_entity, val_news_group), n_users=n_users) #TODO add test set
     
     checkpoint_filename = f"{args.ebnerd_variant}-original-model"
     checkpoint_callback = ModelCheckpoint(
