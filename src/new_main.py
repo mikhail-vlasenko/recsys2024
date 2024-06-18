@@ -38,7 +38,8 @@ def main():
     )
     # TODO: add test set
     
-    n_users = datamodule.data_train.num_users + datamodule.data_val.num_users #+ datamodule.test_set.n_users TODO: add test set
+    #the last created dataset has the largest number of users and articles 
+    n_users = datamodule.data_val.num_users #+ datamodule.test_set.n_users TODO: add test set
     train_user_news, train_news_user = datamodule.data_train.preprocess_neighbors()
     val_user_news, val_news_user = datamodule.data_val.preprocess_neighbors()
     #datamodule.data_train.__getitem__()
