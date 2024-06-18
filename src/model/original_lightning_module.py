@@ -14,6 +14,7 @@ from tqdm import tqdm
 class OriginalModule(LightningModule):
     def __init__(
         self,
+        net: Model,
         train_user_news: list[list[int]],
         train_news_user: list[list[int]],
         val_user_news: list[list[int]],
@@ -37,15 +38,7 @@ class OriginalModule(LightningModule):
         #set up article features
         self.train_news_title, self.train_news_entity, self.train_news_group = train_article_features
         self.val_news_title, self.val_news_entity, self.val_news_group = val_article_features
-
-        self.net = Model(
-            args,
-            torch.tensor(self.train_news_title).to(self.device),
-            torch.tensor(self.train_news_entity).to(self.device),
-            torch.tensor(self.train_news_group).to(self.device),
-            n_users
-        )
-        self.net = self.net.to(self.device)
+        self.net = net
 
         # loss function
         self.criterion = F.binary_cross_entropy_with_logits
@@ -219,5 +212,5 @@ class OriginalModule(LightningModule):
     def to(self, *args: Any, **kwargs: Any) -> Self:
         super().to(*args, **kwargs)
         # idk why but pl doesn't call it like that
-        #self.net.to(*args, **kwargs)
+        self.net.to(*args, **kwargs)
         return self
