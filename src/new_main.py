@@ -38,6 +38,12 @@ def main():
     )
     # TODO: add test set
 
+    
+
+    #the last created dataset has the largest numeber
+    n_users = datamodule.data_val.num_users #+ datamodule.test_set.n_users TODO: add test set
+    train_user_news, train_news_user = datamodule.data_train.preprocess_neighbors()
+    val_user_news, val_news_user = datamodule.data_val.preprocess_neighbors()
     net = Model(
         args,
         torch.tensor(train_news_title).to(device),
@@ -45,11 +51,6 @@ def main():
         torch.tensor(train_news_group).to(device),
         n_users
     )
-
-    #the last created dataset has the largest numeber
-    n_users = datamodule.data_val.num_users #+ datamodule.test_set.n_users TODO: add test set
-    train_user_news, train_news_user = datamodule.data_train.preprocess_neighbors()
-    val_user_news, val_news_user = datamodule.data_val.preprocess_neighbors()
     #datamodule.data_train.__getitem__()
 
     module = OriginalModule(net=net, args=args, train_user_news=train_user_news, train_news_user=train_news_user,
