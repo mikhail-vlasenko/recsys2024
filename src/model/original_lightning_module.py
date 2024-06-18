@@ -149,7 +149,8 @@ class OriginalModule(LightningModule):
         We need to set the model to training mode here. -> swap out the article features to the train ones 
         """  
         self.net.train()
-        self.net.set_article_features(self.train_news_title, self.train_news_entity, self.train_news_group)
+        train_news_title, train_news_entity, train_news_group = self.train_news_title.to(self.device), self.train_news_entity.to(self.device), self.train_news_group.to(self.device)
+        self.net.set_article_features(train_news_title, train_news_entity, train_news_group)
 
     def training_step(
         self, batch: Tuple[torch.Tensor, torch.Tensor], batch_idx: int
@@ -172,7 +173,8 @@ class OriginalModule(LightningModule):
         We need to set the model to evaluation mode here. -> swap out the article features to the val ones
         """
         self.net.eval()
-        self.net.set_article_features(self.val_news_title, self.val_news_entity, self.val_news_group)
+        val_news_title, val_news_entity, val_news_group = self.val_news_title.to(self.device), self.val_news_entity.to(self.device), self.val_news_group.to(self.device)
+        self.net.set_article_features(val_news_title, val_news_entity, val_news_group)
 
 
     def validation_step(
