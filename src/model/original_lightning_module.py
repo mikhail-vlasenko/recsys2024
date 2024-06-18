@@ -45,7 +45,7 @@ class OriginalModule(LightningModule):
             torch.tensor(self.train_news_group).to(self.device),
             n_users
         )
-        print(self.net)
+        print(self.net.device)
         self.net = self.net.to(self.device)
 
         # loss function
