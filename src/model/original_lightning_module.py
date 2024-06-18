@@ -24,6 +24,14 @@ class OriginalModule(LightningModule):
         args 
     ) -> None:
         
+        self.net = Model(
+            args,
+            torch.tensor(self.train_news_title).to(self.device),
+            torch.tensor(self.train_news_entity).to(self.device),
+            torch.tensor(self.train_news_group).to(self.device),
+            n_users
+        )
+        
         super().__init__()
 
         # this line allows to access init params with 'self.hparams' attribute
@@ -38,14 +46,8 @@ class OriginalModule(LightningModule):
         self.train_news_title, self.train_news_entity, self.train_news_group = train_article_features
         self.val_news_title, self.val_news_entity, self.val_news_group = val_article_features
 
-        self.net = Model(
-            args,
-            torch.tensor(self.train_news_title).to(self.device),
-            torch.tensor(self.train_news_entity).to(self.device),
-            torch.tensor(self.train_news_group).to(self.device),
-            n_users
-        )
-        self.net = self.net.to(self.device)
+       
+        #self.net = self.net.to(self.device)
 
         # loss function
         self.criterion = F.binary_cross_entropy_with_logits
@@ -219,5 +221,5 @@ class OriginalModule(LightningModule):
     def to(self, *args: Any, **kwargs: Any) -> Self:
         super().to(*args, **kwargs)
         # idk why but pl doesn't call it like that
-        #self.net.to(*args, **kwargs)
+        self.net.to(*args, **kwargs)
         return self
