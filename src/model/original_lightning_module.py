@@ -219,5 +219,5 @@ class OriginalModule(LightningModule):
     def to(self, *args: Any, **kwargs: Any) -> Self:
         super().to(*args, **kwargs)
         # idk why but pl doesn't call it like that
-        self.net.to(*args, **kwargs)
+        #self.net.to(*args, **kwargs)
         return self
