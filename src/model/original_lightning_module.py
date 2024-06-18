@@ -40,11 +40,11 @@ class OriginalModule(LightningModule):
 
         self.net = Model(
             args,
-            self.train_news_title,
-            self.train_news_entity,
-            self.train_news_group,
+            torch.tensor(self.train_news_title).to(self.device),
+            torch.tensor(self.train_news_entity).to(self.device),
+            torch.tensor(self.train_news_group).to(self.device),
             n_users
-        )
+        ).to(self.device)
 
         # loss function
         self.criterion = F.binary_cross_entropy_with_logits
