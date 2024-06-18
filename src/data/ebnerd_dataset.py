@@ -57,7 +57,14 @@ from src.ebrec.utils._python import (
 
 class EbnerdDataset(Dataset):
 
-    def __init__(self, root_dir, data_split, mode = "train", history_size = 30, fraction = 1, seed = 0, npratio=4):
+    def __init__(self, root_dir, data_split, mode = "train", history_size = 30, fraction = 1, seed = 0, npratio=4, user_id_to_index=None, article_id_to_index=None):
+        """
+        User_id_to_index and article_id_to_index are in this constructor because they can be passed to consectutive datasets
+        This is useful when we want to use the same mapping for the train, validation and test sets. 
+        That means that for validation we start from the given input, and add the new users and articles to the mapping.
+
+        self.num_users and self.num_articles will still refer to the num_users for the current dataset
+        """
         super().__init__()
 
         self.df_behaviors: DataFrame
@@ -65,8 +72,9 @@ class EbnerdDataset(Dataset):
 
         self.num_users: int
         self.num_articles: int
-        self.compress_user_ids()
-        self.compress_article_ids()
+        self.user_id_to_index = self.compress_user_ids(user_id_to_index=user_id_to_index)
+        self.article_id_to_index = self.compress_article_ids(article_id_to_index=article_id_to_index)
+
         assert max(self.df_behaviors[DEFAULT_USER_COL]) + 1 == len(self.df_behaviors[DEFAULT_USER_COL].unique()), "User ids are not continuous"
 
     def __len__(self):
@@ -82,22 +90,47 @@ class EbnerdDataset(Dataset):
 
         return user_id, article_ids_clicked, labels
     
-    def compress_user_ids(self):
-        # Get the unique user ids
-        unique_user_ids = self.df_behaviors[DEFAULT_USER_COL].unique().to_numpy()
-        # Create a mapping from user id to index
-        user_id_to_index = {user_id: index for index, user_id in enumerate(unique_user_ids)}
-        self.num_users = len(user_id_to_index)
+    def compress_user_ids(self, user_id_to_index=None) -> dict[int, int]:
+
+        if user_id_to_index is None:
+            # Get the unique user ids
+            unique_user_ids = self.df_behaviors[DEFAULT_USER_COL].unique().to_numpy()
+            # Create a mapping from user id to index
+            user_id_to_index = {user_id: index for index, user_id in enumerate(unique_user_ids)}
+            self.num_users = len(user_id_to_index)
+        else:
+            current_unique_user_ids = self.df_behaviors[DEFAULT_USER_COL].unique().to_numpy()
+            #num users remains num users in this dataset
+            self.num_users = len(current_unique_user_ids)
+
+            previous_unique_user_ids = np.array(list(user_id_to_index.keys()))
+            unique_user_ids = np.unique(np.concatenate([current_unique_user_ids, previous_unique_user_ids]))
+
+            # Create a mapping from user id to index
+            user_id_to_index = {user_id: index for index, user_id in enumerate(unique_user_ids)}
+
         # Replace the user ids with the index
         self.df_behaviors = self.df_behaviors.with_columns(
             pl.col(DEFAULT_USER_COL).apply(lambda user_id: user_id_to_index[user_id]).alias(DEFAULT_USER_COL)
         )
 
-    def compress_article_ids(self):
-        unique_article_ids = self.article_df[DEFAULT_ARTICLE_ID_COL].unique().to_numpy()
+        return user_id_to_index
 
-        article_id_to_index = {user_id: index for index, user_id in enumerate(unique_article_ids)}
-        self.num_articles = len(article_id_to_index)
+    def compress_article_ids(self, article_id_to_index=None) -> dict[int, int]:
+        
+        if article_id_to_index is None:
+            unique_article_ids = self.article_df[DEFAULT_ARTICLE_ID_COL].unique().to_numpy()
+            article_id_to_index = {user_id: index for index, user_id in enumerate(unique_article_ids)}
+            self.num_articles = len(article_id_to_index)
+        else:
+            current_unique_article_ids = self.article_df[DEFAULT_ARTICLE_ID_COL].unique().to_numpy()
+            self.num_articles = len(current_unique_article_ids)
+
+            previous_unique_article_ids = np.array(list(article_id_to_index.keys()))
+            unique_article_ids = np.unique(np.concatenate([current_unique_article_ids, previous_unique_article_ids]))
+
+            article_id_to_index = {article_id: index for index, article_id in enumerate(unique_article_ids)}
+        
         article_id_to_index[np.nan] = np.nan
 
         self.df_behaviors = self.df_behaviors.with_columns(
@@ -112,8 +145,7 @@ class EbnerdDataset(Dataset):
             pl.col(DEFAULT_ARTICLE_ID_COL).apply(lambda article_id: article_id_to_index[int(article_id)]).alias(DEFAULT_ARTICLE_ID_COL)
         )
 
-    def get_n_users(self) -> int:
-        return len(self.df_behaviors[DEFAULT_USER_COL])
+        return article_id_to_index
     
     def get_word_ids(self, max_title_length, max_entity_length, max_group_length):
         '''
