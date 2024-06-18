@@ -60,7 +60,7 @@ class OriginalModule(LightningModule):
         # make a set-based index for edges
         self.train_user_edge_index: list[set] = []
         for i in range(len(train_user_news)):
-            self.user_edge_index.append(set(train_user_news[i]))
+            self.train_user_edge_index.append(set(train_user_news[i]))
 
         self.val_user_edge_index: list[set] = []
         for i in range(len(val_user_news)):
