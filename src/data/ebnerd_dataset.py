@@ -218,6 +218,13 @@ class EbnerdDataset(Dataset):
             if news_id not in user_news[user_id]:
                 user_news[user_id].append(news_id)
 
+        for list1 in news_user:
+            if not list1:
+                list1.append(0)
+        for list2 in user_news:
+            if not list2:
+                list2.append(0)
+
         return user_news, news_user
 
     def ebnerd_from_path(self, path: Path, mode: str, data_split, seed, npratio, history_size: int = 30, fraction = 1) -> tuple[pl.DataFrame, pl.LazyFrame, pl.DataFrame]:
