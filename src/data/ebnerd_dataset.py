@@ -297,25 +297,26 @@ class EbnerdDataset(Dataset):
                     .sample(fraction=fraction)
                 )
             if mode == "test":
-                print(f'Processing test mode')
+                print(f'Processing test mode...')
                 df_behaviors = (df_behaviors
                     .pipe(self.add_clicked_articles_column)
                     .pipe(create_binary_labels_column)
                 )
 
             #unroll the inview column as rows into the dataframe
-            print(f'Exploding inview and labels columns')
+            print(f'Exploding inview and labels columns...')
             df_behaviors = df_behaviors.explode('article_ids_inview','labels')
 
             #also load article data
-            print(f'Loading article data')
+            print(f'Loading article data...')
             df_articles = pl.read_parquet(article_path)
 
-            #sample df_behaviors
-            df_behaviors = df_behaviors.sample(fraction=fraction)
+            #collect and sample df_behaviors
+            print(f'Collecting and sampling behaviors...')
+            df_behaviors = df_behaviors.collect(streaming=True).sample(fraction=fraction)
 
             #pickle the data
-            print(f'Pickling data to {data_pkl_path}')
+            print(f'Pickling data to {data_pkl_path}...')
             with open(data_pkl_path, 'wb') as f:
                 pickle.dump((df_behaviors,
                              df_history.collect(),
