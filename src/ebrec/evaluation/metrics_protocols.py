@@ -159,7 +159,7 @@ class MetricEvaluator:
         self,
         labels: list[np.ndarray],
         predictions: list[np.ndarray],
-        predictions: list[Metric],
+        metric_functions: list[Metric],
     ):
         self.labels = labels
         self.predictions = predictions
