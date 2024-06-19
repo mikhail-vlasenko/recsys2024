@@ -300,7 +300,7 @@ class EbnerdDataset(Dataset):
                 )
             if mode == "test":
                 df_behaviors, df_height = self.add_clicked_articles_column(df_behaviors)
-                sample_size = fraction * df_height
+                sample_size = int(fraction * df_height)
                 df_behaviors = (df_behaviors
                     .pipe(create_binary_labels_column)
                     .fetch(n_rows=sample_size)
