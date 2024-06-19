@@ -146,6 +146,7 @@ class OriginalModule(LightningModule):
             self, batch: Tuple[torch.Tensor, torch.Tensor], mode: str, ret_scores=False
     ) -> Union[torch.Tensor, Tuple[torch.Tensor, torch.Tensor, torch.Tensor]]:
         user_indices, news_indices, user_news, news_user, labels = self.load_batch(batch, mode = mode)
+        print("percentagepositive", torch.sum(labels).item()/len(labels))
 
         user_embeddings, news_embeddings = self.net(user_indices, news_indices, user_news, news_user)
         user_projected, news_projected = self.net.apply_projection(user_embeddings, news_embeddings)
