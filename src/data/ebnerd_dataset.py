@@ -241,6 +241,7 @@ class EbnerdDataset(Dataset):
         """
         print(f'processing {mode} data')
         if mode == "test":
+            article_path = Path(path) / "ebnerd_testset/articles.parquet"
             path = Path(path) / 'ebnerd_testset' / mode
 
         else:
