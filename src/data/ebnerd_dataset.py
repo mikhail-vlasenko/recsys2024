@@ -234,7 +234,7 @@ class EbnerdDataset(Dataset):
         df_height = df.height
         df = df.lazy()
         none_list_series = pl.Series(clicked_col, [None] * df_height, dtype=pl.List(pl.Int64))
-        return df.with_columns(none_list_series)
+        return df.with_columns(none_list_series), df_height
 
     def ebnerd_from_path(self, path: Path, mode: str, data_split, seed, npratio, history_size: int = 30, fraction = 1) -> tuple[pl.DataFrame, pl.LazyFrame, pl.DataFrame]:
         """
@@ -299,12 +299,9 @@ class EbnerdDataset(Dataset):
                     .sample(fraction=fraction)
                 )
             if mode == "test":
-                print(f'Processing test mode...')
-                len_behaviors = len(df_behaviors)
-                print(f'len(df_behaviors) = {len_behaviors}')
-                sample_size = fraction * len_behaviors
+                df_behaviors, df_height = self.add_clicked_articles_column(df_behaviors)
+                sample_size = fraction * df_height
                 df_behaviors = (df_behaviors
-                    .pipe(self.add_clicked_articles_column)
                     .pipe(create_binary_labels_column)
                     .fetch(n_rows=sample_size)
                 )
