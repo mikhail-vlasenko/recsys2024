@@ -6,7 +6,7 @@ import torch.nn.functional as F
 from lightning import LightningModule
 from src.model.components.model import Model 
 from src.data.data_loader import random_neighbor, optimized_random_neighbor
-from src.ebrec.evaluation.metrics_protocols import MetricEvaluator, AucScore, MrrScore, NdcgScore, intralist_diversity, serendipity, diversity
+from src.ebrec.evaluation.metrics_protocols import MetricEvaluator, AucScore, MrrScore, NdcgScore
 import logging
 from tqdm import tqdm
 
