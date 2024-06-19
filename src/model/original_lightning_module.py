@@ -106,9 +106,12 @@ class OriginalModule(LightningModule):
         if self.more_labels:
             # get label matrix using a list of sets for each user
             labels = torch.empty([len(user_indices), len(user_indices)], dtype=torch.float32)
-            for i in range(len(user_indices)):
-                for j in range(len(news_indices)):
-                    labels[i, j] = 1 if j in self.user_edge_index[i] else 0
+            # converting to np is way faster than gpu_tensor.item()
+            np_user_indices = user_indices.cpu().numpy()
+            np_news_indices = news_indices.cpu().numpy()
+            for i in range(len(np_user_indices)):
+                for j in range(len(np_news_indices)):
+                    labels[i, j] = 1 if np_news_indices[j] in self.user_edge_index[np_user_indices[i]] else 0
             labels = labels.flatten().to(user_projected.device)
 
             # matmul to get a matrix of similarities
