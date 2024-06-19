@@ -178,8 +178,8 @@ class OriginalModule(LightningModule):
 
         loss, scores, labels = self.loss_from_batch(batch, mode="train", ret_scores=True)
 
-        self.metrics.labels += [labels.cpu().numpy()]
-        self.metrics.predictions += [scores.cpu().numpy()]
+        self.metrics.labels += [labels.detach().numpy()]
+        self.metrics.predictions += [scores.detach().numpy()]
         metric_dict = self.metrics.evaluate().evaluations
 
         self.log("train/loss", loss, on_step=True, on_epoch=True, prog_bar=True, logger=True)
@@ -204,8 +204,8 @@ class OriginalModule(LightningModule):
     ) -> torch.Tensor:
         loss, scores, labels = self.loss_from_batch(batch, mode = "val", ret_scores=True) #TODO change mode to val
 
-        self.metrics.labels += [labels.cpu().numpy()]
-        self.metrics.predictions += [scores.cpu().numpy()]
+        self.metrics.labels += [labels.detach().numpy()]
+        self.metrics.predictions += [scores.detach().numpy()]
         metric_dict = self.metrics.evaluate().evaluations #gives a rolling computation of the metrics
 
         self.log("val/loss", loss, on_epoch=True, prog_bar=True, logger=True)
@@ -233,8 +233,8 @@ class OriginalModule(LightningModule):
         
         loss, scores, labels = self.loss_from_batch(batch, mode="test", ret_scores=True)
         
-        self.metrics.labels += [labels.cpu().numpy()]
-        self.metrics.predictions += [scores.cpu().numpy()]
+        self.metrics.labels += [labels.detach().numpy()]
+        self.metrics.predictions += [scores.detach().numpy()]
         metric_dict = self.metrics.evaluate().evaluations #gives a rolling computation of the metrics
 
         self.log("test/loss", loss, on_epoch=True, prog_bar=True, logger=True)
