@@ -231,8 +231,9 @@ class EbnerdDataset(Dataset):
         df: pl.DataFrame,
         clicked_col: str = DEFAULT_CLICKED_ARTICLES_COL
     ) -> pl.DataFrame:
-        series = pl.Series([None] * len(df))
-        return df.with_columns([series.alias(clicked_col)])
+        df = df.lazy()
+        none_list_series = pl.Series(clicked_col, [None] * df.height, dtype=pl.List(pl.Int64))
+        return df.with_columns(none_list_series)
 
     def ebnerd_from_path(self, path: Path, mode: str, data_split, seed, npratio, history_size: int = 30, fraction = 1) -> tuple[pl.DataFrame, pl.LazyFrame, pl.DataFrame]:
         """
@@ -298,10 +299,13 @@ class EbnerdDataset(Dataset):
                 )
             if mode == "test":
                 print(f'Processing test mode...')
+                len_behaviors = len(df_behaviors)
+                print(f'len(df_behaviors) = {len_behaviors}')
+                sample_size = fraction * len_behaviors
                 df_behaviors = (df_behaviors
                     .pipe(self.add_clicked_articles_column)
                     .pipe(create_binary_labels_column)
-                    .sample(fraction=fraction)
+                    .fetch(n_rows=sample_size)
                 )
 
             #unroll the inview column as rows into the dataframe
