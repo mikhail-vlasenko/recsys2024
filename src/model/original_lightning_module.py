@@ -180,7 +180,7 @@ class OriginalModule(LightningModule):
 
         self.metrics.labels += [labels.cpu().numpy()]
         self.metrics.predictions += [scores.cpu().numpy()]
-        metric_dict = self.metrics.evaluate()
+        metric_dict = self.metrics.evaluate().evaluations
 
         self.log("train/loss", loss, on_step=True, on_epoch=True, prog_bar=True, logger=True)
         self.log("train/ndcg@10", metric_dict['ndcg@10'], on_epoch=True, prog_bar=True, logger=True)
@@ -206,7 +206,7 @@ class OriginalModule(LightningModule):
 
         self.metrics.labels += [labels.cpu().numpy()]
         self.metrics.predictions += [scores.cpu().numpy()]
-        metric_dict = self.metrics.evaluate() #gives a rolling computation of the metrics
+        metric_dict = self.metrics.evaluate().evaluations #gives a rolling computation of the metrics
 
         self.log("val/loss", loss, on_epoch=True, prog_bar=True, logger=True)
         self.log("val/ndcg@10", metric_dict['ndcg@10'], on_epoch=True, prog_bar=True, logger=True)
@@ -235,7 +235,7 @@ class OriginalModule(LightningModule):
         
         self.metrics.labels += [labels.cpu().numpy()]
         self.metrics.predictions += [scores.cpu().numpy()]
-        metric_dict = self.metrics.evaluate() #gives a rolling computation of the metrics
+        metric_dict = self.metrics.evaluate().evaluations #gives a rolling computation of the metrics
 
         self.log("test/loss", loss, on_epoch=True, prog_bar=True, logger=True)
         self.log("test/f1", metric_dict['ndcg@10'], on_epoch=True, prog_bar=True, logger=True)
