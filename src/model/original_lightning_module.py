@@ -52,7 +52,7 @@ class OriginalModule(LightningModule):
             self.val_user_news, self.val_news_user = self.pre_load_neighbors(val_user_news, val_news_user)
 
 
-        self.metrics = MetricEvaluator(labels=[], predictions=[], predictions=[AucScore(), MrrScore(), NdcgScore(k=5), NdcgScore(k=10)])
+        self.metrics = MetricEvaluator(labels=[], predictions=[], metric_functions=[AucScore(), MrrScore(), NdcgScore(k=5), NdcgScore(k=10)])
 
         self.more_labels = args.more_labels
 
