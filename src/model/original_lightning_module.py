@@ -222,7 +222,7 @@ class OriginalModule(LightningModule):
         We need to set the model to evaluation mode here. -> swap out the article features to the test ones
         """
         self.net.eval()
-        self.metrics = MetricEvaluator(labels=[], predictions=[], predictions=[AucScore(), MrrScore(), NdcgScore(k=5), NdcgScore(k=10)])
+        self.metrics = MetricEvaluator(labels=[], predictions=[], metric_functions=[AucScore(), MrrScore(), NdcgScore(k=5), NdcgScore(k=10)])
 
         test_news_title, test_news_entity, test_news_group = self.test_news_title.to(self.device), self.test_news_entity.to(self.device), self.test_news_group.to(self.device)
         self.net.set_article_features(test_news_title, test_news_entity, test_news_group)
