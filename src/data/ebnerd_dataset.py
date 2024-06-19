@@ -303,7 +303,7 @@ class EbnerdDataset(Dataset):
                 sample_size = int(fraction * df_height)
                 df_behaviors = (df_behaviors
                     .pipe(create_binary_labels_column)
-                    .fetch(n_rows=sample_size)
+                    .fetch(n_rows=sample_size, streaming=True)
                 )
 
             #unroll the inview column as rows into the dataframe
