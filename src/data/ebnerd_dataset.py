@@ -313,6 +313,7 @@ class EbnerdDataset(Dataset):
 
             #collect and sample df_behaviors
             print(f'Collecting and sampling behaviors...')
+            df_behaviors.explain(streaming=True)
             df_behaviors = df_behaviors.collect(streaming=True).sample(fraction=fraction)
 
             #pickle the data
