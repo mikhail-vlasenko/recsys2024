@@ -38,6 +38,7 @@ from src.ebrec.utils._behaviors import (
     add_known_user_column,
     add_prediction_scores,
     truncate_history,
+    add_clicked_articles_column,
 )
 from src.ebrec.evaluation import MetricEvaluator, AucScore, NdcgScore, MrrScore
 from src.ebrec.utils._articles import convert_text2encoding_with_transformers
@@ -235,7 +236,7 @@ class EbnerdDataset(Dataset):
         print(f'processing {mode} data')
         if mode == "test":
             path = Path(path) / 'ebnerd_testset' / mode
-            return None, None, None
+
         else:
             article_path = Path(path) / data_split / "articles.parquet"
             path = Path(path) / data_split / mode
@@ -283,23 +284,33 @@ class EbnerdDataset(Dataset):
                     .pipe(create_binary_labels_column)
                     .sample(fraction=fraction)
                 )
-            if mode == "test" or mode == "validation":
+            if mode == "validation":
                 df_behaviors = (df_behaviors
                     .pipe(create_binary_labels_column)
                     .sample(fraction=fraction)
                 )
+            if mode == "test":
+                print(f'Processing test mode')
+                df_behaviors = (df_behaviors
+                    .pipe(add_clicked_articles_column)
+                    .pipe(create_binary_labels_column)
+                    .sample(fraction=fraction)
+                )
 
-            #unroll the inview column as rows into the dataframe 
+            #unroll the inview column as rows into the dataframe
+            print(f'Exploding inview and labels columns')
             df_behaviors = df_behaviors.explode('article_ids_inview','labels')
 
-            #also load article data 
+            #also load article data
+            print(f'Loading article data from {article_path}')
             df_articles = pl.read_parquet(article_path)
 
             #pickle the data
+            print(f'Pickling data to {data_pkl_path}')
             with open(data_pkl_path, 'wb') as f:
                 pickle.dump((df_behaviors, df_history.collect(), df_articles), f)
 
-
+            print(f'Processing completed successfully')
             return df_behaviors, df_history, df_articles
 
     @classmethod

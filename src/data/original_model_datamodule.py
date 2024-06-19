@@ -55,7 +55,9 @@ class OriginalModelDatamodule(LightningDataModule):
             self.data_val: Optional[EbnerdDataset] = EbnerdDataset(root_dir=self.hparams.root_dir, data_split=self.data_split, mode="validation", 
                                                                    history_size=self.hparams.history_size, fraction=self.hparams.fraction, npratio=self.hparams.npratio,
                                                                    user_id_to_index=self.data_train.user_id_to_index, article_id_to_index=self.data_train.article_id_to_index)
-            #self.data_test: Optional[EbnerdDataset] = EbnerdDataset(root_dir=self.hparams.root_dir, data_split=self.data_split, mode="test")
+            self.data_test: Optional[EbnerdDataset] = EbnerdDataset(root_dir=self.hparams.root_dir, data_split=self.data_split, mode="test",
+                                                                    history_size=self.hparams.history_size, fraction=self.hparams.fraction, npratio=self.hparams.npratio,
+                                                                    user_id_to_index=self.data_train.user_id_to_index, article_id_to_index=self.data_train.article_id_to_index)
 
     def train_dataloader(self) -> DataLoader[Any]:
         """Create and return the train dataloader.
@@ -91,7 +93,7 @@ class OriginalModelDatamodule(LightningDataModule):
         :return: The test dataloader.
         """
         return DataLoader(
-            dataset=self.data_val, #TODO change to test 
+            dataset=self.data_test,
             batch_size=self.batch_size_per_device,
             num_workers=self.hparams.num_workers,
             pin_memory=self.hparams.pin_memory,

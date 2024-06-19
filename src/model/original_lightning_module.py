@@ -19,8 +19,11 @@ class OriginalModule(LightningModule):
         train_news_user: list[list[int]],
         val_user_news: list[list[int]],
         val_news_user: list[list[int]],
+        test_user_news: list[list[int]],
+        test_news_user: list[list[int]],
         train_article_features: Tuple[torch.Tensor, torch.Tensor, torch.Tensor],
         val_article_features: Tuple[torch.Tensor, torch.Tensor, torch.Tensor],
+        test_article_features: Tuple[torch.Tensor, torch.Tensor, torch.Tensor],
         n_users: int,
         args 
     ) -> None:
@@ -34,13 +37,17 @@ class OriginalModule(LightningModule):
         self.train_user_news = train_user_news
         self.val_news_user = val_news_user
         self.val_user_news = val_user_news
+        self.test_news_user = test_news_user
+        self.test_user_news = test_user_news
         
         #set up article features
         self.train_news_title, self.train_news_entity, self.train_news_group = train_article_features
         self.val_news_title, self.val_news_entity, self.val_news_group = val_article_features
+        self.test_news_title, self.test_news_entity, self.test_news_group = test_article_features
         self.train_news_title, self.train_news_entity, self.train_news_group = self.train_news_title.to(self.device), self.train_news_entity.to(self.device), self.train_news_group.to(self.device)
         self.val_news_title, self.val_news_entity, self.val_news_group = self.val_news_title.to(self.device), self.val_news_entity.to(self.device), self.val_news_group.to(self.device)
-        
+        self.test_news_title, self.test_news_entity, self.test_news_group = self.test_news_title.to(self.device), self.test_news_entity.to(self.device), self.test_news_group.to(self.device)
+
         self.net = net
 
         # loss function
@@ -50,6 +57,7 @@ class OriginalModule(LightningModule):
             print("args.optimized_subsampling:", args.optimized_subsampling)
             self.train_user_news, self.train_news_user = self.pre_load_neighbors(train_user_news, train_news_user)
             self.val_user_news, self.val_news_user = self.pre_load_neighbors(val_user_news, val_news_user)
+            self.test_user_news, self.test_news_user = self.pre_load_neighbors(test_user_news, test_news_user)
 
 
         self.f1 = classification.BinaryF1Score()

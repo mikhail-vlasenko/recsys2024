@@ -36,14 +36,17 @@ def main():
     val_news_title, val_news_entity, val_news_group = datamodule.data_val.get_word_ids(
         max_title_length=args.title_len, max_entity_length=40, max_group_length=40
     )
-    # TODO: add test set
+    test_news_title, test_news_entity, test_news_group = datamodule.data_test.get_word_ids(
+        max_title_length=args.title_len, max_entity_length=40, max_group_length=40
+    )
 
     
 
     #the last created dataset has the largest numeber
-    n_users = datamodule.data_val.num_users #+ datamodule.test_set.n_users TODO: add test set
+    n_users = datamodule.data_val.num_users + datamodule.data_test.n_users
     train_user_news, train_news_user = datamodule.data_train.preprocess_neighbors()
     val_user_news, val_news_user = datamodule.data_val.preprocess_neighbors()
+    test_user_news, test_news_user = datamodule.data_test.preprocess_neighbors()
     net = Model(
         args,
         torch.tensor(train_news_title).to(device),
@@ -53,9 +56,14 @@ def main():
     )
     #datamodule.data_train.__getitem__()
 
-    module = OriginalModule(net=net, args=args, train_user_news=train_user_news, train_news_user=train_news_user,
-                            val_user_news=val_user_news, val_news_user=val_news_user, train_article_features=(torch.tensor(train_news_title), torch.tensor(train_news_entity), torch.tensor(train_news_group)),
-                            val_article_features=(torch.tensor(val_news_title), torch.tensor(val_news_entity), torch.tensor(val_news_group)), n_users=n_users) #TODO add test set
+    module = OriginalModule(net=net, args=args,
+                            train_user_news=train_user_news, train_news_user=train_news_user,
+                            val_user_news=val_user_news, val_news_user=val_news_user,
+                            test_user_news=test_user_news, test_news_user=test_news_user,
+                            train_article_features=(torch.tensor(train_news_title), torch.tensor(train_news_entity), torch.tensor(train_news_group)),
+                            val_article_features=(torch.tensor(val_news_title), torch.tensor(val_news_entity), torch.tensor(val_news_group)),
+                            test_article_features=(torch.tensor(test_news_title), torch.tensor(test_news_entity), torch.tensor(test_news_group)),
+                            n_users=n_users)
     
     checkpoint_filename = f"{args.ebnerd_variant}-original-model"
     checkpoint_callback = ModelCheckpoint(
