@@ -1,5 +1,6 @@
 from typing import Any, Dict, Tuple, Union, Optional
 
+import numpy as np
 import torch
 import torch.nn.functional as F
 from lightning import LightningModule
@@ -14,8 +15,8 @@ class OriginalModule(LightningModule):
     def __init__(
         self,
         net: torch.nn.Module,
-        train_user_news: list[list[int]],
-        train_news_user: list[list[int]],
+        train_user_news: list[list[float]],
+        train_news_user: list[list[float]],
         n_news: int,
         args 
     ) -> None:
@@ -48,7 +49,8 @@ class OriginalModule(LightningModule):
         # make a set-based index for edges
         self.user_edge_index: list[set] = []
         for i in range(len(train_user_news)):
-            self.user_edge_index.append(set(train_user_news[i]))
+            # take the first column because it's the news index
+            self.user_edge_index.append(set(np.array(train_user_news[i])[:, 0]))
 
     def pre_load_neighbors(self, user_news, news_user):
         user_lengths = torch.tensor([len(user_news[i]) for i in range(len(user_news))]).unsqueeze(1)#.to(device)
@@ -85,10 +87,10 @@ class OriginalModule(LightningModule):
         if self.hparams.args.optimized_subsampling:
             user_news, news_user = optimized_random_neighbor(self.hparams.args, user_news, news_user, self.user_lengths, self.news_lengths)
         else:
-            user_news, news_user = random_neighbor(self.hparams.args, user_news, news_user, self.n_news)
+            user_news, news_user = random_neighbor(self.hparams.args, user_news, news_user, 2)
 
-        user_news, news_user = torch.tensor(user_news, dtype=torch.long).to(self.device), torch.tensor(
-                news_user, dtype=torch.long).to(self.device)
+        user_news, news_user = torch.tensor(user_news, dtype=torch.float32).to(self.device), torch.tensor(
+                news_user, dtype=torch.float32).to(self.device)
         
         return user_id, article_index, user_news, news_user, labels
 
@@ -124,7 +126,7 @@ class OriginalModule(LightningModule):
     def loss_from_batch(
             self, batch: Tuple[torch.Tensor, torch.Tensor], mode: str, ret_scores=False
     ) -> Union[torch.Tensor, Tuple[torch.Tensor, torch.Tensor, torch.Tensor]]:
-        user_indices, news_indices, user_news, news_user, labels = self.load_batch(batch, mode = mode)
+        user_indices, news_indices, user_news, news_user, labels = self.load_batch(batch, mode=mode)
 
         user_embeddings, news_embeddings = self.net(user_indices, news_indices, user_news, news_user)
         user_projected, news_projected = self.net.apply_projection(user_embeddings, news_embeddings)

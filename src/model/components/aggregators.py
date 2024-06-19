@@ -87,7 +87,10 @@ class NeighborAggregator(Aggregator):
 
 
 class RoutingLayer(nn.Module):
-    def __init__(self, layers, out_caps, nhidden, batch_size, drop, inp_caps=None, name=None, tau=1.0):
+    def __init__(
+            self, layers, out_caps, nhidden, batch_size, drop,
+            inp_caps=None, name=None, tau=1.0, edge_feature_dim=0, lora_edge_feats=False
+    ):
         super().__init__()
         if not name:
             layer = self.__class__.__name__.lower()
@@ -99,15 +102,34 @@ class RoutingLayer(nn.Module):
 
         self.nhidden = nhidden
         self.k = out_caps
+        self.inp_caps = inp_caps
 
-        if inp_caps is not None:
-            self.inp_caps = inp_caps
+        if self.inp_caps is not None:
             if layers == 1:
-                self.fc1 = nn.Linear(inp_caps * nhidden, nhidden * out_caps)
+                self.fc1 = nn.Linear(self.inp_caps * nhidden, nhidden * self.k)
             if layers == 2:
-                self.fc2 = nn.Linear(inp_caps * nhidden, nhidden * out_caps)
+                self.fc2 = nn.Linear(self.inp_caps * nhidden, nhidden * self.k)
 
-    def forward(self, self_vectors, neighbor_vectors, max_iter):
+        # idea for edge features:
+        # given current code, it needs to modify neighbor_z,
+        # but I cant change the fc weights, because they are shared for processing the self embedding
+        # Also, I cant change the dimensionality of the neighbor_z, because that should match the self_z
+        #
+        # Now, 2 main options that i see:
+        # 1. have a layer (n_edge_features -> self.inp_caps * self.nhidden)
+        #   and then add the output to the corresponding neighbor_z.
+        #   Downside is that it will not take into account the node features
+        # 2. Have a LoRA that takes neighbor_z concatenated with edge_features and outputs shape like neighbor_z
+        #   then add it to the neighbor_z
+        self.edge_feature_dim = edge_feature_dim
+        self.lora_edge_feats = lora_edge_feats
+        if self.edge_feature_dim > 0:
+            if not self.lora_edge_feats:
+                self.edge_fc = nn.Linear(self.edge_feature_dim, self.nhidden * self.k)
+            else:
+                raise NotImplementedError("LoRA with edge features is not implemented yet")
+
+    def forward(self, self_vectors, neighbor_vectors, max_iter, edge_feats=None):
         """
 
         :param self_vectors: [batch_size, num_considered_nodes, k * n_hidden].
@@ -115,6 +137,8 @@ class RoutingLayer(nn.Module):
             then goes to args.user_neighbor or args.news_neighbor for news and users respectively
         :param neighbor_vectors: [batch_size, num_considered_nodes, n_neighbors, k * n_hidden]
         :param max_iter: int
+        :param edge_feats: [batch_size, num_considered_nodes, n_neighbors, edge_feature_dim].
+            Edge features for neighbors
         """
         num_considered_nodes = self_vectors.shape[-2]
         n_neighbors = neighbor_vectors.shape[-2]
@@ -125,7 +149,6 @@ class RoutingLayer(nn.Module):
             # this reshape converts to [all_nodes, their_full_embedding_size]
             self_z = F.relu(self.fc1(self_vectors.reshape(-1, self.inp_caps * self.nhidden)))
             neighbor_z = F.relu(self.fc1(neighbor_vectors.reshape(-1, self.inp_caps * self.nhidden)))
-            
         elif hasattr(self, 'fc2'):
             self_z = F.relu(self.fc2(self_vectors.reshape(-1, self.inp_caps * self.nhidden)))
             neighbor_z = F.relu(self.fc2(neighbor_vectors.reshape(-1, self.inp_caps * self.nhidden)))
@@ -133,9 +156,14 @@ class RoutingLayer(nn.Module):
             self_z = self_vectors.reshape(-1, self.k * self.nhidden)
             neighbor_z = neighbor_vectors.reshape(-1, self.k * self.nhidden)
 
-        self_z_n = F.normalize(self_z.reshape(self.batch_size, -1, self.k, self.nhidden), dim=-1)
+        if self.edge_feature_dim > 0:
+            if not self.lora_edge_feats:
+                edge_feats = F.relu(self.edge_fc(edge_feats.reshape(-1, self.edge_feature_dim)))
+                neighbor_z = neighbor_z + edge_feats
+
+        self_z_n = F.normalize(self_z.reshape(self.batch_size, num_considered_nodes, self.k, self.nhidden), dim=-1)
         neighbor_z_n = F.normalize(
-            neighbor_z.reshape(self.batch_size, -1, n_neighbors, self.k, self.nhidden), dim=-1)
+            neighbor_z.reshape(self.batch_size, num_considered_nodes, n_neighbors, self.k, self.nhidden), dim=-1)
 
         u = None
         for clus_iter in range(max_iter):
@@ -143,13 +171,13 @@ class RoutingLayer(nn.Module):
                 p = torch.zeros(self.batch_size, num_considered_nodes, n_neighbors, self.k).to(
                     self_z_n.device)
             else:
-                p = torch.sum(neighbor_z_n * u.view(self.batch_size, -1, 1, self.k, self.nhidden), dim=-1)
+                p = torch.sum(neighbor_z_n * u.view(self.batch_size, num_considered_nodes, 1, self.k, self.nhidden), dim=-1)
             p = F.softmax(p / self.tau, dim=-1)
 
-            u = torch.sum(neighbor_z_n * p.view(self.batch_size, -1, n_neighbors, self.k, 1), dim=2)
+            u = torch.sum(neighbor_z_n * p.view(self.batch_size, num_considered_nodes, n_neighbors, self.k, 1), dim=2)
             u += self_z_n
             if clus_iter < max_iter - 1:
                 u = F.normalize(u, dim=-1)
 
-        return self.drop(F.relu(u.reshape(self.batch_size, -1, self.k * self.nhidden)))
+        return self.drop(F.relu(u.reshape(self.batch_size, num_considered_nodes, self.k * self.nhidden)))
 

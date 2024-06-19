@@ -41,17 +41,24 @@ def load_new_data(args):
         news_title, news_entity, news_group
 
 
-def random_neighbor(args, input_user_news, input_news_user, news_len):
-    user_news = np.zeros([len(input_user_news), args.news_neighbor], dtype=np.int32)
+def random_neighbor(args, input_user_news, input_news_user, edge_feat_dim):
+    def handle_none(x):
+        # some edge features are None, cant put nan in torch tensor cause it will nan everything
+        for i in range(len(x)):
+            if x[i] is None:
+                x[i] = 0
+        return x
+    # store neighbor index and the edge features
+    user_news = np.zeros([len(input_user_news), args.news_neighbor, edge_feat_dim + 1], dtype=np.float32)
     for i in range(len(input_user_news)):
         n_neighbors = len(input_user_news[i])
         if n_neighbors >= args.news_neighbor:
             sampled_indices = np.random.choice(list(range(n_neighbors)), size=args.news_neighbor, replace=False)
         else:
             sampled_indices = np.random.choice(list(range(n_neighbors)), size=args.news_neighbor, replace=True)
-        user_news[i] = np.array([input_user_news[i][k] for k in sampled_indices])
+        user_news[i] = np.array([handle_none(input_user_news[i][k]) for k in sampled_indices])
 
-    news_user = np.zeros([len(input_news_user), args.user_neighbor], dtype=np.int32)
+    news_user = np.zeros([len(input_news_user), args.user_neighbor, edge_feat_dim + 1], dtype=np.float32)
     for i in range(len(input_news_user)):
         n_neighbors = len(input_news_user[i])
         if n_neighbors == 0:
@@ -60,7 +67,7 @@ def random_neighbor(args, input_user_news, input_news_user, news_len):
             sampled_indices = np.random.choice(list(range(n_neighbors)), size=args.user_neighbor, replace=False)
         else:
             sampled_indices = np.random.choice(list(range(n_neighbors)), size=args.user_neighbor, replace=True)
-        news_user[int(i)] = np.array([input_news_user[i][k] for k in sampled_indices])
+        news_user[int(i)] = np.array([handle_none(input_news_user[i][k]) for k in sampled_indices])
 
     return user_news, news_user
 

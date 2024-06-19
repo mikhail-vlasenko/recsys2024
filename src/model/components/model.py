@@ -54,6 +54,7 @@ class Model(nn.Module):
         self.input_size_title = 4 * 8 * 8
         self.filter_shape = [2, 8, 1, 4]
         self.cat_size = 7 * 30 * 4
+        self.edge_feature_dim = 2
 
         self.user_transform = nn.Linear(self.user_dim, self.dim)
         self.item_transform = nn.Linear(self.cnn_out_size, self.dim)
@@ -63,7 +64,10 @@ class Model(nn.Module):
         inp_caps = [None, self.ncaps]
         out_caps = [self.ncaps, self.ncaps - self.dcaps]
         self.routers = [
-            RoutingLayer(routing_layers[i], out_caps[i], self.nhidden, self.batch_size, args.dropout_rate, inp_caps[i])
+            RoutingLayer(
+                routing_layers[i], out_caps[i], self.nhidden, self.batch_size, args.dropout_rate, inp_caps[i],
+                edge_feature_dim=self.edge_feature_dim, lora_edge_feats=False
+            )
             for i in range(self.n_iter)
         ]
 
@@ -82,8 +86,9 @@ class Model(nn.Module):
         self.ret_linear = nn.Linear(self.nhidden, caps)
 
     def forward(self, user_indices, news_indices, user_news, news_user):
-        newsvec, uservec = self.get_neighbors(news_indices, user_indices, user_news, news_user)
-        news_embeddings, user_embeddings = self.aggregate(newsvec, uservec)
+        newsvec, uservec, news_edge_feat_vec, user_edge_feat_vec = self.get_neighbors(
+            news_indices, user_indices, user_news, news_user)
+        news_embeddings, user_embeddings = self.aggregate(newsvec, uservec, news_edge_feat_vec, user_edge_feat_vec)
 
         return user_embeddings, news_embeddings
 
@@ -116,53 +121,69 @@ class Model(nn.Module):
         user = [user_seeds]
         news_vectors = []
         user_vectors = []
+        news_edge_features = []
+        user_edge_features = []
 
         news_hop_vectors = self.convolution(news[0]).reshape(-1, self.cnn_out_size)
         news_hop_vectors = F.relu(self.item_transform(news_hop_vectors))
         news_vectors.append(news_hop_vectors.reshape(self.batch_size, -1, self.dim))
-        news_neighbors = F.embedding(news[0], news_user)
-        news.append(news_neighbors)
+        neighbors = news_user[news[0]].view(self.batch_size, -1, self.edge_feature_dim + 1)
+        neighbor_indices = neighbors[:, :, 0].to(torch.long)
+        edge_features = neighbors[:, :, 1:]
+        news.append(neighbor_indices)
+        news_edge_features.append(edge_features)
 
         user_hop_vectors = self.user_emb_matrix(user[0]).reshape(-1, self.user_dim)
         user_hop_vectors = F.relu(self.user_transform(user_hop_vectors))
         user_vectors.append(user_hop_vectors.reshape(self.batch_size, -1, self.dim))
-        user_neighbors = F.embedding(user[0], user_news)
-        user.append(user_neighbors)
+        neighbors = user_news[user[0]].view(self.batch_size, -1, self.edge_feature_dim + 1)
+        neighbor_indices = neighbors[:, :, 0].to(torch.long)
+        edge_features = neighbors[:, :, 1:]
+        user.append(neighbor_indices)
+        user_edge_features.append(edge_features)
 
         if self.n_iter >= 1:
             news_hop_vectors = self.user_emb_matrix(news[1]).reshape(-1, self.user_dim)
             news_hop_vectors = F.relu(self.user_transform(news_hop_vectors))
-            news_hop_vectors = news_hop_vectors.reshape(self.batch_size, -1, self.dim)
-            news_neighbors = user_news[news[1]].view(self.batch_size, -1)
-            news_vectors.append(news_hop_vectors)
-            news.append(news_neighbors)
+            news_vectors.append(news_hop_vectors.reshape(self.batch_size, -1, self.dim))
+            neighbors = user_news[news[1]].view(self.batch_size, -1, self.edge_feature_dim + 1)
+            neighbor_indices = neighbors[:, :, 0].to(torch.long)
+            edge_features = neighbors[:, :, 1:]
+            news.append(neighbor_indices)
+            news_edge_features.append(edge_features)
 
             user_hop_vectors = self.convolution(user[1]).reshape(-1, self.cnn_out_size)
             user_hop_vectors = F.relu(self.item_transform(user_hop_vectors))
-            user_hop_vectors = user_hop_vectors.reshape(self.batch_size, -1, self.dim)
-            user_neighbors = news_user[user[1]].view(self.batch_size, -1)
-            user_vectors.append(user_hop_vectors)
-            user.append(user_neighbors)
+            user_vectors.append(user_hop_vectors.reshape(self.batch_size, -1, self.dim))
+            neighbors = news_user[user[1]].view(self.batch_size, -1, self.edge_feature_dim + 1)
+            neighbor_indices = neighbors[:, :, 0].to(torch.long)
+            edge_features = neighbors[:, :, 1:]
+            user.append(neighbor_indices)
+            user_edge_features.append(edge_features)
 
         if self.n_iter >= 2:
             news_hop_vectors = self.convolution(news[2]).reshape(-1, self.cnn_out_size)
             news_hop_vectors = F.relu(self.item_transform(news_hop_vectors))
-            news_hop_vectors = news_hop_vectors.reshape(self.batch_size, -1, self.dim)
-            news_neighbors = news_user[news[2]].view(self.batch_size, -1)
-            news_vectors.append(news_hop_vectors)
-            news.append(news_neighbors)
+            news_vectors.append(news_hop_vectors.reshape(self.batch_size, -1, self.dim))
+            neighbors = news_user[news[2]].view(self.batch_size, -1, self.edge_feature_dim + 1)
+            neighbor_indices = neighbors[:, :, 0].to(torch.long)
+            edge_features = neighbors[:, :, 1:]
+            news.append(neighbor_indices)
+            news_edge_features.append(edge_features)
 
             user_hop_vectors = self.user_emb_matrix(user[2]).reshape(-1, self.user_dim)
             user_hop_vectors = F.relu(self.user_transform(user_hop_vectors))
-            user_hop_vectors = user_hop_vectors.reshape(self.batch_size, -1, self.dim)
-            user_neighbors = user_news[user[2]].view(self.batch_size, -1)
-            user_vectors.append(user_hop_vectors)
-            user.append(user_neighbors)
+            user_vectors.append(user_hop_vectors.reshape(self.batch_size, -1, self.dim))
+            neighbors = user_news[user[2]].view(self.batch_size, -1, self.edge_feature_dim + 1)
+            neighbor_indices = neighbors[:, :, 0].to(torch.long)
+            edge_features = neighbors[:, :, 1:]
+            user.append(neighbor_indices)
+            user_edge_features.append(edge_features)
 
         # n_iter is always 2
-        return news_vectors, user_vectors
+        return news_vectors, user_vectors, news_edge_features, user_edge_features
 
-    def aggregate(self, news_vectors, user_vectors):
+    def aggregate(self, news_vectors, user_vectors, news_edge_features, user_edge_features):
         inp_caps, out_caps = None, self.ncaps
         cur_dim = self.dim
 
@@ -188,12 +209,18 @@ class Model(nn.Module):
                         news_shape = (self.batch_size, -1, self.news_neighbor, inp_caps * self.nhidden)
                         user_shape = (self.batch_size, -1, self.user_neighbor, inp_caps * self.nhidden)
 
-                news_vector = router(self_vectors=news_vectors[hop],
-                                          neighbor_vectors=news_vectors[hop + 1].reshape(*news_shape),
-                                          max_iter=self.routit)
-                user_vector = router(self_vectors=user_vectors[hop],
-                                          neighbor_vectors=user_vectors[hop + 1].reshape(*user_shape),
-                                          max_iter=self.routit)
+                news_vector = router(
+                    self_vectors=news_vectors[hop],
+                    neighbor_vectors=news_vectors[hop + 1].reshape(*news_shape),
+                    max_iter=self.routit,
+                    edge_feats=news_edge_features[hop]
+                )
+                user_vector = router(
+                    self_vectors=user_vectors[hop],
+                    neighbor_vectors=user_vectors[hop + 1].reshape(*user_shape),
+                    max_iter=self.routit,
+                    edge_feats=user_edge_features[hop]
+                )
 
                 news_vectors_next_iter.append(news_vector)
                 user_vectors_next_iter.append(user_vector)
