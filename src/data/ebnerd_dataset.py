@@ -300,6 +300,7 @@ class EbnerdDataset(Dataset):
                 df_behaviors = (df_behaviors
                     .pipe(self.add_clicked_articles_column)
                     .pipe(create_binary_labels_column)
+                    .collect()
                     .sample(fraction=fraction)
                 )
 
