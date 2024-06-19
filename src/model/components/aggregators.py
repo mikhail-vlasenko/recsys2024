@@ -87,7 +87,7 @@ class NeighborAggregator(Aggregator):
 
 
 class RoutingLayer(nn.Module):
-    def __init__(self, layers, out_caps, cap_sz, batch_size, drop, inp_caps=None, name=None, tau=1.0):
+    def __init__(self, layers, out_caps, nhidden, batch_size, drop, inp_caps=None, name=None, tau=1.0):
         super().__init__()
         if not name:
             layer = self.__class__.__name__.lower()
@@ -97,48 +97,59 @@ class RoutingLayer(nn.Module):
         self.tau = tau
         self.drop = nn.Dropout(p=drop)
 
-        self.cap_sz = cap_sz
-        self.d, self.k = out_caps * cap_sz, out_caps
+        self.nhidden = nhidden
+        self.k = out_caps
 
         if inp_caps is not None:
             self.inp_caps = inp_caps
             if layers == 1:
-                self.fc1 = nn.Linear(inp_caps * cap_sz, cap_sz * out_caps)
+                self.fc1 = nn.Linear(inp_caps * nhidden, nhidden * out_caps)
             if layers == 2:
-                self.fc2 = nn.Linear(inp_caps * cap_sz, cap_sz * out_caps)
+                self.fc2 = nn.Linear(inp_caps * nhidden, nhidden * out_caps)
 
     def forward(self, self_vectors, neighbor_vectors, max_iter):
+        """
+
+        :param self_vectors: [batch_size, num_considered_nodes, k * n_hidden].
+            num_considered_nodes starts with 1,
+            then goes to args.user_neighbor or args.news_neighbor for news and users respectively
+        :param neighbor_vectors: [batch_size, num_considered_nodes, n_neighbors, k * n_hidden]
+        :param max_iter: int
+        """
+        num_considered_nodes = self_vectors.shape[-2]
+        n_neighbors = neighbor_vectors.shape[-2]
         self_vectors = self.drop(self_vectors)
         neighbor_vectors = self.drop(neighbor_vectors)
 
         if hasattr(self, 'fc1'):
-            self_z = F.relu(self.fc1(self_vectors.reshape(-1, self.inp_caps * self.cap_sz)))
-            neighbor_z = F.relu(self.fc1(neighbor_vectors.reshape(-1, self.inp_caps * self.cap_sz)))
+            # this reshape converts to [all_nodes, their_full_embedding_size]
+            self_z = F.relu(self.fc1(self_vectors.reshape(-1, self.inp_caps * self.nhidden)))
+            neighbor_z = F.relu(self.fc1(neighbor_vectors.reshape(-1, self.inp_caps * self.nhidden)))
             
         elif hasattr(self, 'fc2'):
-            self_z = F.relu(self.fc2(self_vectors.reshape(-1, self.inp_caps * self.cap_sz)))
-            neighbor_z = F.relu(self.fc2(neighbor_vectors.reshape(-1, self.inp_caps * self.cap_sz)))
+            self_z = F.relu(self.fc2(self_vectors.reshape(-1, self.inp_caps * self.nhidden)))
+            neighbor_z = F.relu(self.fc2(neighbor_vectors.reshape(-1, self.inp_caps * self.nhidden)))
         else:
-            self_z = self_vectors.reshape(-1, self.d)
-            neighbor_z = neighbor_vectors.reshape(-1, self.d)
+            self_z = self_vectors.reshape(-1, self.k * self.nhidden)
+            neighbor_z = neighbor_vectors.reshape(-1, self.k * self.nhidden)
 
-        self_z_n = F.normalize(self_z.reshape(self.batch_size, -1, self.k, self.d // self.k), dim=-1)
+        self_z_n = F.normalize(self_z.reshape(self.batch_size, -1, self.k, self.nhidden), dim=-1)
         neighbor_z_n = F.normalize(
-            neighbor_z.reshape(self.batch_size, -1, neighbor_vectors.shape[-2], self.k, self.d // self.k), dim=-1)
+            neighbor_z.reshape(self.batch_size, -1, n_neighbors, self.k, self.nhidden), dim=-1)
 
         u = None
         for clus_iter in range(max_iter):
             if u is None:
-                p = torch.zeros(self.batch_size, neighbor_vectors.shape[-3], neighbor_vectors.shape[-2], self.k).to(
+                p = torch.zeros(self.batch_size, num_considered_nodes, n_neighbors, self.k).to(
                     self_z_n.device)
             else:
-                p = torch.sum(neighbor_z_n * u.view(self.batch_size, -1, 1, self.k, self.d // self.k), dim=-1)
+                p = torch.sum(neighbor_z_n * u.view(self.batch_size, -1, 1, self.k, self.nhidden), dim=-1)
             p = F.softmax(p / self.tau, dim=-1)
 
-            u = torch.sum(neighbor_z_n * p.view(self.batch_size, -1, neighbor_vectors.shape[-2], self.k, 1), dim=2)
+            u = torch.sum(neighbor_z_n * p.view(self.batch_size, -1, n_neighbors, self.k, 1), dim=2)
             u += self_z_n
             if clus_iter < max_iter - 1:
                 u = F.normalize(u, dim=-1)
 
-        return self.drop(F.relu(u.reshape(self.batch_size, -1, self.d)))
+        return self.drop(F.relu(u.reshape(self.batch_size, -1, self.k * self.nhidden)))
 

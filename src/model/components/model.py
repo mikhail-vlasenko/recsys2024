@@ -246,7 +246,8 @@ class Model(nn.Module):
 
         return pool
 
-    def to(self, *args, **kwargs):
+    def to(self, *args, **kwargs) -> 'Model':
         super().to(*args, **kwargs)
         for layer in self.routers:
             layer.to(*args, **kwargs)
+        return self
