@@ -65,13 +65,17 @@ def main():
         mode="min",
     )
 
+    early_stopping_callback = EarlyStopping(
+        monitor="val/auc", patience=3, mode="max"
+    )
+
     wandb_logger = WandbLogger(
         entity="inverse_rl", project="RecSys", name=checkpoint_filename
     )
 
     wandb_logger.watch(module, log="all")
 
-    callbacks = [checkpoint_callback]
+    callbacks = [checkpoint_callback, early_stopping_callback]
 
     trainer_args = {
         "callbacks": callbacks,

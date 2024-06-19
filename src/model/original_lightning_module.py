@@ -161,6 +161,7 @@ class OriginalModule(LightningModule):
         We need to set the model to training mode here. -> swap out the article features to the train ones 
         """  
         self.net.train()
+        self.metrics = MetricEvaluator(labels=[], preds=[], metrics=[AucScore(), MrrScore(), NdcgScore(k=5), NdcgScore(k=10)])
         train_news_title, train_news_entity, train_news_group = self.train_news_title.to(self.device), self.train_news_entity.to(self.device), self.train_news_group.to(self.device)
         self.net.set_article_features(train_news_title, train_news_entity, train_news_group)
 
@@ -175,9 +176,16 @@ class OriginalModule(LightningModule):
         :return: A tensor of losses between model predictions and targets.
         """
 
-        loss = self.loss_from_batch(batch, mode="train")
+        loss, scores, labels = self.loss_from_batch(batch, mode="train", ret_scores=True)
+
+        self.metrics.labels += [labels.cpu().numpy()]
+        self.metrics.preds += [scores.cpu().numpy()]
+        metric_dict = self.metrics.evaluate()
 
         self.log("train/loss", loss, on_step=True, on_epoch=True, prog_bar=True, logger=True)
+        self.log("train/ndcg@10", metric_dict['ndcg@10'], on_epoch=True, prog_bar=True, logger=True)
+        self.log("train/auc", metric_dict['auc'], on_epoch=True, prog_bar=True, logger=True)
+
         return loss
     
     def on_validation_start(self) -> None:
@@ -201,7 +209,7 @@ class OriginalModule(LightningModule):
         metric_dict = self.metrics.evaluate() #gives a rolling computation of the metrics
 
         self.log("val/loss", loss, on_epoch=True, prog_bar=True, logger=True)
-        self.log("val/f1", metric_dict['ndcg@10'], on_epoch=True, prog_bar=True, logger=True)
+        self.log("val/ndcg@10", metric_dict['ndcg@10'], on_epoch=True, prog_bar=True, logger=True)
         self.log("val/auc", metric_dict['auc'], on_epoch=True, prog_bar=True, logger=True)
         self.log("val/mrr", metric_dict['mrr'], on_epoch=True, prog_bar=False, logger=True)
         self.log("val/ndcg@5", metric_dict['ndcg@5'], on_epoch=True, prog_bar=False, logger=True)
