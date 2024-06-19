@@ -52,7 +52,7 @@ class OriginalModule(LightningModule):
             self.val_user_news, self.val_news_user = self.pre_load_neighbors(val_user_news, val_news_user)
 
 
-        self.metrics = MetricEvaluator(labels=[], preds=[], metrics=[AucScore(), MrrScore(), NdcgScore(k=5), NdcgScore(k=10)])
+        self.metrics = MetricEvaluator(labels=[], predictions=[], predictions=[AucScore(), MrrScore(), NdcgScore(k=5), NdcgScore(k=10)])
 
         self.more_labels = args.more_labels
 
@@ -161,7 +161,7 @@ class OriginalModule(LightningModule):
         We need to set the model to training mode here. -> swap out the article features to the train ones 
         """  
         self.net.train()
-        self.metrics = MetricEvaluator(labels=[], preds=[], metrics=[AucScore(), MrrScore(), NdcgScore(k=5), NdcgScore(k=10)])
+        self.metrics = MetricEvaluator(labels=[], predictions=[], predictions=[AucScore(), MrrScore(), NdcgScore(k=5), NdcgScore(k=10)])
         train_news_title, train_news_entity, train_news_group = self.train_news_title.to(self.device), self.train_news_entity.to(self.device), self.train_news_group.to(self.device)
         self.net.set_article_features(train_news_title, train_news_entity, train_news_group)
 
@@ -179,7 +179,7 @@ class OriginalModule(LightningModule):
         loss, scores, labels = self.loss_from_batch(batch, mode="train", ret_scores=True)
 
         self.metrics.labels += [labels.cpu().numpy()]
-        self.metrics.preds += [scores.cpu().numpy()]
+        self.metrics.predictions += [scores.cpu().numpy()]
         metric_dict = self.metrics.evaluate()
 
         self.log("train/loss", loss, on_step=True, on_epoch=True, prog_bar=True, logger=True)
@@ -193,7 +193,7 @@ class OriginalModule(LightningModule):
         We need to set the model to evaluation mode here. -> swap out the article features to the val ones
         """
         self.net.eval()
-        self.metrics = MetricEvaluator(labels=[], preds=[], metrics=[AucScore(), MrrScore(), NdcgScore(k=5), NdcgScore(k=10)])
+        self.metrics = MetricEvaluator(labels=[], predictions=[], predictions=[AucScore(), MrrScore(), NdcgScore(k=5), NdcgScore(k=10)])
 
         val_news_title, val_news_entity, val_news_group = self.val_news_title.to(self.device), self.val_news_entity.to(self.device), self.val_news_group.to(self.device)
         self.net.set_article_features(val_news_title, val_news_entity, val_news_group)
@@ -205,7 +205,7 @@ class OriginalModule(LightningModule):
         loss, scores, labels = self.loss_from_batch(batch, mode = "val", ret_scores=True) #TODO change mode to val
 
         self.metrics.labels += [labels.cpu().numpy()]
-        self.metrics.preds += [scores.cpu().numpy()]
+        self.metrics.predictions += [scores.cpu().numpy()]
         metric_dict = self.metrics.evaluate() #gives a rolling computation of the metrics
 
         self.log("val/loss", loss, on_epoch=True, prog_bar=True, logger=True)
@@ -222,7 +222,7 @@ class OriginalModule(LightningModule):
         We need to set the model to evaluation mode here. -> swap out the article features to the test ones
         """
         self.net.eval()
-        self.metrics = MetricEvaluator(labels=[], preds=[], metrics=[AucScore(), MrrScore(), NdcgScore(k=5), NdcgScore(k=10)])
+        self.metrics = MetricEvaluator(labels=[], predictions=[], predictions=[AucScore(), MrrScore(), NdcgScore(k=5), NdcgScore(k=10)])
 
         test_news_title, test_news_entity, test_news_group = self.test_news_title.to(self.device), self.test_news_entity.to(self.device), self.test_news_group.to(self.device)
         self.net.set_article_features(test_news_title, test_news_entity, test_news_group)
@@ -234,7 +234,7 @@ class OriginalModule(LightningModule):
         loss, scores, labels = self.loss_from_batch(batch, mode="test", ret_scores=True)
         
         self.metrics.labels += [labels.cpu().numpy()]
-        self.metrics.preds += [scores.cpu().numpy()]
+        self.metrics.predictions += [scores.cpu().numpy()]
         metric_dict = self.metrics.evaluate() #gives a rolling computation of the metrics
 
         self.log("test/loss", loss, on_epoch=True, prog_bar=True, logger=True)
