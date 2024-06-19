@@ -314,7 +314,7 @@ class EbnerdDataset(Dataset):
             #pickle the data
             print(f'Pickling data to {data_pkl_path}')
             with open(data_pkl_path, 'wb') as f:
-                pickle.dump((df_behaviors.collect().sample(fraction=fraction),
+                pickle.dump((df_behaviors.collect(streaming=True).sample(fraction=fraction),
                              df_history.collect(),
                              df_articles),
                              f)
