@@ -231,6 +231,7 @@ class EbnerdDataset(Dataset):
         df: pl.DataFrame,
         clicked_col: str = DEFAULT_CLICKED_ARTICLES_COL
     ) -> pl.DataFrame:
+        df = df.lazy()
         return df.with_columns(pl.lit(None, dtype=pl.List(pl.Int64)).alias(clicked_col))
 
     def ebnerd_from_path(self, path: Path, mode: str, data_split, seed, npratio, history_size: int = 30, fraction = 1) -> tuple[pl.DataFrame, pl.LazyFrame, pl.DataFrame]:
