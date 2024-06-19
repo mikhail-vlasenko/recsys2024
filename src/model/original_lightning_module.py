@@ -131,6 +131,7 @@ class OriginalModule(LightningModule):
             labels = torch.empty([len(user_indices), len(user_indices)], dtype=torch.float32)
             for i in range(len(user_indices)):
                 for j in range(len(news_indices)):
+                    print(user_edge_index[i], j)
                     labels[i, j] = 1 if j in user_edge_index[i] else 0
             labels = labels.flatten().to(user_projected.device)
 
