@@ -307,7 +307,7 @@ class EbnerdDataset(Dataset):
             df_behaviors = df_behaviors.explode('article_ids_inview','labels')
 
             #also load article data
-            print(f'Loading article data from {article_path}')
+            print(f'Loading article data')
             df_articles = pl.read_parquet(article_path)
 
             #pickle the data
