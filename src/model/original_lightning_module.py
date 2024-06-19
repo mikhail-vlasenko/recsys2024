@@ -4,9 +4,9 @@ from typing_extensions import Self
 import torch
 import torch.nn.functional as F
 from lightning import LightningModule
-from torcheval.metrics import BinaryF1Score, BinaryAUROC
 from src.model.components.model import Model 
 from src.data.data_loader import random_neighbor, optimized_random_neighbor
+from src.ebrec.evaluation.metrics_protocols import MetricEvaluator, AucScore, MrrScore, NdcgScore, intralist_diversity, serendipity, diversity
 import logging
 from tqdm import tqdm
 
@@ -52,8 +52,7 @@ class OriginalModule(LightningModule):
             self.val_user_news, self.val_news_user = self.pre_load_neighbors(val_user_news, val_news_user)
 
 
-        self.f1 = BinaryF1Score()
-        self.auc = BinaryAUROC()
+        self.metrics = MetricEvaluator(labels=[], preds=[], metrics=[AucScore(), MrrScore(), NdcgScore(k=5), NdcgScore(k=10)])
 
         self.more_labels = args.more_labels
 
@@ -186,8 +185,8 @@ class OriginalModule(LightningModule):
         We need to set the model to evaluation mode here. -> swap out the article features to the val ones
         """
         self.net.eval()
-        self.f1.reset()
-        self.auc.reset()
+        self.metrics = MetricEvaluator(labels=[], preds=[], metrics=[AucScore(), MrrScore(), NdcgScore(k=5), NdcgScore(k=10)])
+
         val_news_title, val_news_entity, val_news_group = self.val_news_title.to(self.device), self.val_news_entity.to(self.device), self.val_news_group.to(self.device)
         self.net.set_article_features(val_news_title, val_news_entity, val_news_group)
 
@@ -197,25 +196,26 @@ class OriginalModule(LightningModule):
     ) -> torch.Tensor:
         loss, scores, labels = self.loss_from_batch(batch, mode = "val", ret_scores=True) #TODO change mode to val
 
-        self.f1.update(scores, labels)
-        self.auc.update(scores, labels)
-
-        f1 = self.f1.compute()
-        roc_auc = self.auc.compute()
+        self.metrics.labels += [labels.cpu().numpy()]
+        self.metrics.preds += [scores.cpu().numpy()]
+        metric_dict = self.metrics.evaluate() #gives a rolling computation of the metrics
 
         self.log("val/loss", loss, on_epoch=True, prog_bar=True, logger=True)
-        self.log("val/f1", f1, on_epoch=True, prog_bar=True, logger=True)
-        self.log("val/roc_auc", roc_auc, on_epoch=True, prog_bar=True, logger=True)
-
-        return loss, f1, roc_auc
+        self.log("val/f1", metric_dict['ndcg@10'], on_epoch=True, prog_bar=True, logger=True)
+        self.log("val/auc", metric_dict['auc'], on_epoch=True, prog_bar=True, logger=True)
+        self.log("val/mrr", metric_dict['mrr'], on_epoch=True, prog_bar=False, logger=True)
+        self.log("val/ndcg@5", metric_dict['ndcg@5'], on_epoch=True, prog_bar=False, logger=True)
+        #also log the beyond accuracy metrics to the logger
+        
+        return loss, metric_dict['ndcg@10'], metric_dict['auc']
     
     def on_test_start(self) -> None:
         """Lightning hook that is called when test begins.
         We need to set the model to evaluation mode here. -> swap out the article features to the test ones
         """
         self.net.eval()
-        self.f1.reset()
-        self.auc.reset()
+        self.metrics = MetricEvaluator(labels=[], preds=[], metrics=[AucScore(), MrrScore(), NdcgScore(k=5), NdcgScore(k=10)])
+
         test_news_title, test_news_entity, test_news_group = self.test_news_title.to(self.device), self.test_news_entity.to(self.device), self.test_news_group.to(self.device)
         self.net.set_article_features(test_news_title, test_news_entity, test_news_group)
 
@@ -225,17 +225,18 @@ class OriginalModule(LightningModule):
         
         loss, scores, labels = self.loss_from_batch(batch, mode="test", ret_scores=True)
         
-        self.f1.update(scores, labels)
-        self.auc.update(scores, labels)
-
-        f1 = self.f1.compute()
-        roc_auc = self.auc.compute()
+        self.metrics.labels += [labels.cpu().numpy()]
+        self.metrics.preds += [scores.cpu().numpy()]
+        metric_dict = self.metrics.evaluate() #gives a rolling computation of the metrics
 
         self.log("test/loss", loss, on_epoch=True, prog_bar=True, logger=True)
-        self.log("test/f1", f1, on_epoch=True, prog_bar=True, logger=True)
-        self.log("test/roc_auc", roc_auc, on_epoch=True, prog_bar=True, logger=True)
-
-        return loss, f1, roc_auc
+        self.log("test/f1", metric_dict['ndcg@10'], on_epoch=True, prog_bar=True, logger=True)
+        self.log("test/auc", metric_dict['auc'], on_epoch=True, prog_bar=True, logger=True)
+        self.log("test/mrr", metric_dict['mrr'], on_epoch=True, prog_bar=False, logger=True)
+        self.log("test/ndcg@5", metric_dict['ndcg@5'], on_epoch=True, prog_bar=False, logger=True)
+        #also log the beyond accuracy metrics to the logger
+        
+        return loss, metric_dict['ndcg@10'], metric_dict['auc']
 
     def configure_optimizers(self) -> Dict[str, Any]:
         optimizer = torch.optim.Adam(
