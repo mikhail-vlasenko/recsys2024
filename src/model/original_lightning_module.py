@@ -161,7 +161,7 @@ class OriginalModule(LightningModule):
         We need to set the model to training mode here. -> swap out the article features to the train ones 
         """  
         self.net.train()
-        self.metrics = MetricEvaluator(labels=[], predictions=[], predictions=[AucScore(), MrrScore(), NdcgScore(k=5), NdcgScore(k=10)])
+        self.metrics = MetricEvaluator(labels=[], predictions=[], metric_functions=[AucScore(), MrrScore(), NdcgScore(k=5), NdcgScore(k=10)])
         train_news_title, train_news_entity, train_news_group = self.train_news_title.to(self.device), self.train_news_entity.to(self.device), self.train_news_group.to(self.device)
         self.net.set_article_features(train_news_title, train_news_entity, train_news_group)
 
@@ -193,7 +193,7 @@ class OriginalModule(LightningModule):
         We need to set the model to evaluation mode here. -> swap out the article features to the val ones
         """
         self.net.eval()
-        self.metrics = MetricEvaluator(labels=[], predictions=[], predictions=[AucScore(), MrrScore(), NdcgScore(k=5), NdcgScore(k=10)])
+        self.metrics = MetricEvaluator(labels=[], predictions=[], metric_functions=[AucScore(), MrrScore(), NdcgScore(k=5), NdcgScore(k=10)])
 
         val_news_title, val_news_entity, val_news_group = self.val_news_title.to(self.device), self.val_news_entity.to(self.device), self.val_news_group.to(self.device)
         self.net.set_article_features(val_news_title, val_news_entity, val_news_group)
