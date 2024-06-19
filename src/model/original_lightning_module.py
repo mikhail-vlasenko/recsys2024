@@ -121,6 +121,7 @@ class OriginalModule(LightningModule):
     def compute_scores(self, user_projected, news_projected, user_indices, news_indices, labels, mode):
         if self.more_labels:
             if mode == "train":
+                print('mode=Train')
                 user_edge_index = self.train_user_edge_index
             elif mode == "val":
                 user_edge_index = self.val_user_edge_index
