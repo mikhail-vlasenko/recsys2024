@@ -119,6 +119,12 @@ class EbnerdDataset(Dataset):
 
     def compress_article_ids(self, article_id_to_index=None) -> dict[int, int]:
         
+        if self.mode == "test":
+            exists_article_id = 'article_id' in self.df_behaviors
+            print(f'Bool: article_id in test mode df_behaviors?: {exists_article_id}')
+            if not exists_article_id:
+                return None
+
         if article_id_to_index is None:
             unique_article_ids = self.article_df[DEFAULT_ARTICLE_ID_COL].unique().to_numpy()
             article_id_to_index = {user_id: index for index, user_id in enumerate(unique_article_ids)}
