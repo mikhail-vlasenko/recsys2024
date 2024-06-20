@@ -10,9 +10,9 @@
 
 module purge
 module load 2023
-module load Anaconda3/2023.05
+module load Anaconda3/2023.07-2
 
 cd $HOME/FOMO/
 conda env create -f environment.yml
-conda activate fomo
+conda activate recsys
 pip install -r requirements.txt
