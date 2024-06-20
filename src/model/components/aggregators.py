@@ -88,7 +88,7 @@ class NeighborAggregator(Aggregator):
 
 class RoutingLayer(nn.Module):
     def __init__(
-            self, layers, out_caps, nhidden, batch_size, drop,
+            self, layers, out_caps, nhidden, drop,
             inp_caps=None, name=None, tau=1.0, edge_feature_dim=0, lora_edge_feats=False
     ):
         super().__init__()
@@ -96,7 +96,6 @@ class RoutingLayer(nn.Module):
             layer = self.__class__.__name__.lower()
             name = layer + '_' + str(get_layer_id(layer))
         self.name = name
-        self.batch_size = batch_size
         self.tau = tau
         self.drop = nn.Dropout(p=drop)
 
@@ -140,6 +139,7 @@ class RoutingLayer(nn.Module):
         :param edge_feats: [batch_size, num_considered_nodes, n_neighbors, edge_feature_dim].
             Edge features for neighbors
         """
+        batch_size = self_vectors.shape[0]
         num_considered_nodes = self_vectors.shape[-2]
         n_neighbors = neighbor_vectors.shape[-2]
         self_vectors = self.drop(self_vectors)
@@ -161,23 +161,23 @@ class RoutingLayer(nn.Module):
                 edge_feats = F.relu(self.edge_fc(edge_feats.reshape(-1, self.edge_feature_dim)))
                 neighbor_z = neighbor_z + edge_feats
 
-        self_z_n = F.normalize(self_z.reshape(self.batch_size, num_considered_nodes, self.k, self.nhidden), dim=-1)
+        self_z_n = F.normalize(self_z.reshape(batch_size, num_considered_nodes, self.k, self.nhidden), dim=-1)
         neighbor_z_n = F.normalize(
-            neighbor_z.reshape(self.batch_size, num_considered_nodes, n_neighbors, self.k, self.nhidden), dim=-1)
+            neighbor_z.reshape(batch_size, num_considered_nodes, n_neighbors, self.k, self.nhidden), dim=-1)
 
         u = None
         for clus_iter in range(max_iter):
             if u is None:
-                p = torch.zeros(self.batch_size, num_considered_nodes, n_neighbors, self.k).to(
+                p = torch.zeros(batch_size, num_considered_nodes, n_neighbors, self.k).to(
                     self_z_n.device)
             else:
-                p = torch.sum(neighbor_z_n * u.view(self.batch_size, num_considered_nodes, 1, self.k, self.nhidden), dim=-1)
+                p = torch.sum(neighbor_z_n * u.view(batch_size, num_considered_nodes, 1, self.k, self.nhidden), dim=-1)
             p = F.softmax(p / self.tau, dim=-1)
 
-            u = torch.sum(neighbor_z_n * p.view(self.batch_size, num_considered_nodes, n_neighbors, self.k, 1), dim=2)
+            u = torch.sum(neighbor_z_n * p.view(batch_size, num_considered_nodes, n_neighbors, self.k, 1), dim=2)
             u += self_z_n
             if clus_iter < max_iter - 1:
                 u = F.normalize(u, dim=-1)
 
-        return self.drop(F.relu(u.reshape(self.batch_size, num_considered_nodes, self.k * self.nhidden)))
+        return self.drop(F.relu(u.reshape(batch_size, num_considered_nodes, self.k * self.nhidden)))
 
