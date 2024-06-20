@@ -128,6 +128,10 @@ class EbnerdDataset(Dataset):
 
             exists_article_id = 'article_id' in self.df_behaviors
             print(f'is article_id in test mode df_behaviors?: {exists_article_id}')
+
+            print('maybe "article_id" is in "article_id_fixed"')
+            print(self.df_behaviors['article_id_fixed'])
+
             if not exists_article_id:
                 return None
 
