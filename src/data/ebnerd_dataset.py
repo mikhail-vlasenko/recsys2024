@@ -122,7 +122,7 @@ class EbnerdDataset(Dataset):
     def compress_article_ids(self, article_id_to_index=None, news_user=None) -> dict[int, int]:
         
         if self.mode == "test":
-            unique_article_ids = news_user.keys().to_numpy()
+            unique_article_ids = news_user.keys()
             article_id_to_index = {user_id: index for index, user_id in enumerate(unique_article_ids)}
             self.num_articles = len(article_id_to_index)
 
