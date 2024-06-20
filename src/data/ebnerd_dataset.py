@@ -313,14 +313,14 @@ class EbnerdDataset(Dataset):
                     .sample(fraction=fraction)
                 )
 
-            #unroll the inview column as rows into the dataframe 
-            df_behaviors = df_behaviors.explode(DEFAULT_INVIEW_ARTICLES_COL, DEFAULT_LABELS_COL)
-
             print(f"Loaded {len(df_behaviors)} rows")
             if one_row_per_impression:
                 # keep only one row per impression id
                 df_behaviors = df_behaviors.unique(subset=DEFAULT_IMPRESSION_ID_COL, keep="first")
                 print(f"Kept one row per impression id, now {len(df_behaviors)} rows")
+
+            #unroll the inview column as rows into the dataframe 
+            df_behaviors = df_behaviors.explode(DEFAULT_INVIEW_ARTICLES_COL, DEFAULT_LABELS_COL)
 
             #also load article data 
             df_articles = pl.read_parquet(article_path)
