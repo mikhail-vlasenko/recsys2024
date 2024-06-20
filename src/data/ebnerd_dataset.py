@@ -91,6 +91,8 @@ class EbnerdDataset(Dataset):
         # Get the required columns 
         user_id = row[DEFAULT_USER_COL]
         article_ids_clicked = row[DEFAULT_INVIEW_ARTICLES_COL]
+        if self.mode == "test":
+            article_ids_clicked = np.random.choice(article_ids_clicked)
         labels = row[DEFAULT_LABELS_COL]
 
         return user_id, article_ids_clicked, labels
