@@ -134,9 +134,6 @@ class EbnerdDataset(Dataset):
             print('no it\'s a list if ids')
             print([len(id_list) for id_list in self.df_behaviors['article_id_fixed']])
 
-            if not exists_article_id:
-                return None
-
         if article_id_to_index is None:
             unique_article_ids = self.article_df[DEFAULT_ARTICLE_ID_COL].unique().to_numpy()
             article_id_to_index = {user_id: index for index, user_id in enumerate(unique_article_ids)}
@@ -151,7 +148,7 @@ class EbnerdDataset(Dataset):
 
         article_id_to_index[np.nan] = np.nan
 
-        if self.mode != "test": #it tries to look for 'article_id in df_behaviors but there is only article_id_fixed'
+        if self.mode != "test": #it looks for 'article_id' in self.df_behaviors but there is only article_id_fixed (a list of 30 ids)'
             self.df_behaviors = self.df_behaviors.with_columns(
                 pl.col(DEFAULT_ARTICLE_ID_COL).apply(lambda article_id: article_id_to_index[int(article_id)]).alias(DEFAULT_ARTICLE_ID_COL)
             )
