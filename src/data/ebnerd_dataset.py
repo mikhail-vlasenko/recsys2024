@@ -118,36 +118,42 @@ class EbnerdDataset(Dataset):
 
         return user_id_to_index
 
-    def compress_article_ids(self, article_id_to_index=None) -> dict[int, int]:
+    def compress_article_ids(self, article_id_to_index=None, news_user=None) -> dict[int, int]:
         
         if self.mode == "test":
-            return None
-
-        if article_id_to_index is None:
-            unique_article_ids = self.article_df[DEFAULT_ARTICLE_ID_COL].unique().to_numpy()
+            unique_article_ids = news_user.keys().to_numpy()
             article_id_to_index = {user_id: index for index, user_id in enumerate(unique_article_ids)}
             self.num_articles = len(article_id_to_index)
+
+            article_id_to_index[np.nan] = np.nan
+
         else:
-            current_unique_article_ids = self.article_df[DEFAULT_ARTICLE_ID_COL].unique().to_numpy()
-            previous_unique_article_ids = np.array(list(article_id_to_index.keys()))
-            unique_article_ids = np.unique(np.concatenate([current_unique_article_ids, previous_unique_article_ids]))
 
-            article_id_to_index = {article_id: index for index, article_id in enumerate(unique_article_ids)}
-            self.num_articles = len(article_id_to_index)
+            if article_id_to_index is None:
+                unique_article_ids = self.article_df[DEFAULT_ARTICLE_ID_COL].unique().to_numpy()
+                article_id_to_index = {user_id: index for index, user_id in enumerate(unique_article_ids)}
+                self.num_articles = len(article_id_to_index)
+            else:
+                current_unique_article_ids = self.article_df[DEFAULT_ARTICLE_ID_COL].unique().to_numpy()
+                previous_unique_article_ids = np.array(list(article_id_to_index.keys()))
+                unique_article_ids = np.unique(np.concatenate([current_unique_article_ids, previous_unique_article_ids]))
 
-        article_id_to_index[np.nan] = np.nan
+                article_id_to_index = {article_id: index for index, article_id in enumerate(unique_article_ids)}
+                self.num_articles = len(article_id_to_index)
 
-        self.df_behaviors = self.df_behaviors.with_columns(
-            pl.col(DEFAULT_ARTICLE_ID_COL).apply(lambda article_id: article_id_to_index[int(article_id)]).alias(DEFAULT_ARTICLE_ID_COL)
-        )
-        self.df_behaviors = self.df_behaviors.with_columns(
-            pl.col(DEFAULT_INVIEW_ARTICLES_COL).apply(
-                lambda article_id: article_id_to_index[int(article_id)]
-            ).alias(DEFAULT_INVIEW_ARTICLES_COL)
-        )
-        self.article_df = self.article_df.with_columns(
-            pl.col(DEFAULT_ARTICLE_ID_COL).apply(lambda article_id: article_id_to_index[int(article_id)]).alias(DEFAULT_ARTICLE_ID_COL)
-        )
+            article_id_to_index[np.nan] = np.nan
+
+            self.df_behaviors = self.df_behaviors.with_columns(
+                pl.col(DEFAULT_ARTICLE_ID_COL).apply(lambda article_id: article_id_to_index[int(article_id)]).alias(DEFAULT_ARTICLE_ID_COL)
+            )
+            self.df_behaviors = self.df_behaviors.with_columns(
+                pl.col(DEFAULT_INVIEW_ARTICLES_COL).apply(
+                    lambda article_id: article_id_to_index[int(article_id)]
+                ).alias(DEFAULT_INVIEW_ARTICLES_COL)
+            )
+            self.article_df = self.article_df.with_columns(
+                pl.col(DEFAULT_ARTICLE_ID_COL).apply(lambda article_id: article_id_to_index[int(article_id)]).alias(DEFAULT_ARTICLE_ID_COL)
+            )
 
         return article_id_to_index
     
@@ -214,7 +220,7 @@ class EbnerdDataset(Dataset):
     
     def preprocess_neighbors(self):
         if self.mode == "test":
-            news_user = defaultdict(list)
+            news_user_dict = defaultdict(list)
             user_news = [[] for _ in range(self.num_users)]
 
             for row in self.df_behaviors.rows(named=True):
@@ -222,10 +228,15 @@ class EbnerdDataset(Dataset):
                 user_id = row[DEFAULT_USER_COL]
 
                 for n_id in news_id:
-                    if user_id not in news_user[n_id]:
-                        news_user[n_id].append(user_id)
+                    if user_id not in news_user_dict[n_id]:
+                        news_user_dict[n_id].append(user_id)
                 if news_id not in user_news[user_id]:
                     user_news[user_id].append(news_id)
+
+            self.article_id_to_index = self.compress_article_ids(news_user=news_user)
+            news_user = [[] for _ in range(self.num_articles)]
+            for article_id, user_id in news_user_dict.items():
+                news_user[self.article_id_to_index[int(article_id)]] = user_id
 
         else:
             news_user = [[] for _ in range(self.num_articles)]
