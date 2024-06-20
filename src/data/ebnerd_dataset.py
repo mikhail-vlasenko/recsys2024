@@ -120,19 +120,7 @@ class EbnerdDataset(Dataset):
     def compress_article_ids(self, article_id_to_index=None) -> dict[int, int]:
         
         if self.mode == "test":
-
-            print('test mode df_behaviors columns:')
-            print(self.df_behaviors.columns)
-            print('test mode df_behaviors schema:')
-            print(self.df_behaviors.schema)
-
-            exists_article_id = 'article_id' in self.df_behaviors
-            print(f'is article_id in test mode df_behaviors?: {exists_article_id}')
-
-            print('maybe "article_id" is in "article_id_fixed"')
-            print(self.df_behaviors['article_id_fixed'])
-            print('no it\'s a list if ids')
-            print([len(id_list) for id_list in self.df_behaviors['article_id_fixed']])
+            return None
 
         if article_id_to_index is None:
             unique_article_ids = self.article_df[DEFAULT_ARTICLE_ID_COL].unique().to_numpy()
@@ -148,18 +136,17 @@ class EbnerdDataset(Dataset):
 
         article_id_to_index[np.nan] = np.nan
 
-        if self.mode != "test": #it looks for 'article_id' in self.df_behaviors but there is only article_id_fixed (a list of 30 ids)'
-            self.df_behaviors = self.df_behaviors.with_columns(
-                pl.col(DEFAULT_ARTICLE_ID_COL).apply(lambda article_id: article_id_to_index[int(article_id)]).alias(DEFAULT_ARTICLE_ID_COL)
-            )
-            self.df_behaviors = self.df_behaviors.with_columns(
-                pl.col(DEFAULT_INVIEW_ARTICLES_COL).apply(
-                    lambda article_id: article_id_to_index[int(article_id)]
-                ).alias(DEFAULT_INVIEW_ARTICLES_COL)
-            )
-            self.article_df = self.article_df.with_columns(
-                pl.col(DEFAULT_ARTICLE_ID_COL).apply(lambda article_id: article_id_to_index[int(article_id)]).alias(DEFAULT_ARTICLE_ID_COL)
-            )
+        self.df_behaviors = self.df_behaviors.with_columns(
+            pl.col(DEFAULT_ARTICLE_ID_COL).apply(lambda article_id: article_id_to_index[int(article_id)]).alias(DEFAULT_ARTICLE_ID_COL)
+        )
+        self.df_behaviors = self.df_behaviors.with_columns(
+            pl.col(DEFAULT_INVIEW_ARTICLES_COL).apply(
+                lambda article_id: article_id_to_index[int(article_id)]
+            ).alias(DEFAULT_INVIEW_ARTICLES_COL)
+        )
+        self.article_df = self.article_df.with_columns(
+            pl.col(DEFAULT_ARTICLE_ID_COL).apply(lambda article_id: article_id_to_index[int(article_id)]).alias(DEFAULT_ARTICLE_ID_COL)
+        )
 
         return article_id_to_index
     
@@ -225,25 +212,10 @@ class EbnerdDataset(Dataset):
         ]
     
     def preprocess_neighbors(self):
-        news_user = [[] for _ in range(self.num_articles)]
-        user_news = [[] for _ in range(self.num_users)]
+        if self.mode == "train" or self.mode == "validation":
+            news_user = [[] for _ in range(self.num_articles)]
+            user_news = [[] for _ in range(self.num_users)]
 
-        if self.mode == "test":
-            for row in self.df_behaviors.rows(named=True):
-                news_id = row[DEFAULT_INVIEW_ARTICLES_COL]
-                user_id = row[DEFAULT_USER_COL]
-                print(f'self.num_articles: {self.num_articles}')
-                print(f'self.num_users: {self.num_users}')
-                print(f'news_id: {news_id}')
-                print(f'user_id: {user_id}')
-            
-                for n_id in news_id:
-                    if user_id not in news_user[n_id]:
-                        news_user[n_id].append(user_id)
-                if news_id not in user_news[user_id]:
-                    user_news[user_id].append(news_id)
-
-        else:
             for row in self.df_behaviors.rows(named=True):
                 news_id = row[DEFAULT_INVIEW_ARTICLES_COL]
                 user_id = row[DEFAULT_USER_COL]
@@ -253,12 +225,12 @@ class EbnerdDataset(Dataset):
                 if news_id not in user_news[user_id]:
                     user_news[user_id].append(news_id)
 
-        for list1 in news_user:
-            if not list1:
-                list1.append(0)
-        for list2 in user_news:
-            if not list2:
-                list2.append(0)
+            for list1 in news_user:
+                if not list1:
+                    list1.append(0)
+            for list2 in user_news:
+                if not list2:
+                    list2.append(0)
 
         return user_news, news_user
 
