@@ -120,8 +120,14 @@ class EbnerdDataset(Dataset):
     def compress_article_ids(self, article_id_to_index=None) -> dict[int, int]:
         
         if self.mode == "test":
+
+            print('test mode df_behaviors columns:')
+            print(self.df_behaviors.columns)
+            print('test mode df_behaviors schema:')
+            print(self.df_behaviors.schema)
+
             exists_article_id = 'article_id' in self.df_behaviors
-            print(f'Bool: article_id in test mode df_behaviors?: {exists_article_id}')
+            print(f'is article_id in test mode df_behaviors?: {exists_article_id}')
             if not exists_article_id:
                 return None
 
