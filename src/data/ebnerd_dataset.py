@@ -233,6 +233,7 @@ class EbnerdDataset(Dataset):
                 if news_id not in user_news[user_id]:
                     user_news[user_id].append(news_id)
 
+            #change news_user to list of lists
             self.article_id_to_index = self.compress_article_ids(news_user=news_user)
             news_user = [[] for _ in range(self.num_articles)]
             for article_id, user_id in news_user_dict.items():
