@@ -1,6 +1,6 @@
 from typing import Any, Dict, Tuple, Union, Optional
-from typing_extensions import Self
 
+import numpy as np
 import torch
 import torch.nn.functional as F
 from lightning import LightningModule
@@ -15,8 +15,8 @@ class OriginalModule(LightningModule):
     def __init__(
         self,
         net: Model,
-        train_user_news: list[list[int]],
-        train_news_user: list[list[int]],
+        train_user_news: list[list[float]],
+        train_news_user: list[list[float]],
         val_user_news: list[list[int]],
         val_news_user: list[list[int]],
         train_article_features: Tuple[torch.Tensor, torch.Tensor, torch.Tensor],
@@ -60,11 +60,12 @@ class OriginalModule(LightningModule):
         # make a set-based index for edges
         self.train_user_edge_index: list[set] = []
         for i in range(len(train_user_news)):
-            self.train_user_edge_index.append(set(train_user_news[i]))
+            # take the first column because it's the news index
+            self.train_user_edge_index.append(set(np.array(train_user_news[i])[:, 0]))
 
         self.val_user_edge_index: list[set] = []
         for i in range(len(val_user_news)):
-            self.val_user_edge_index.append(set(val_user_news[i]))
+            self.val_user_edge_index.append(set(np.array(val_user_news[i])[:, 0]))
 
         #TODO add test set
 
@@ -103,10 +104,10 @@ class OriginalModule(LightningModule):
         if self.hparams.args.optimized_subsampling:
             user_news, news_user = optimized_random_neighbor(self.hparams.args, user_news, news_user, self.user_lengths, self.news_lengths)
         else:
-            user_news, news_user = random_neighbor(self.hparams.args, user_news, news_user)
+            user_news, news_user = random_neighbor(self.hparams.args, user_news, news_user, 2)
 
-        user_news, news_user = torch.tensor(user_news, dtype=torch.long).to(self.device), torch.tensor(
-                news_user, dtype=torch.long).to(self.device)
+        user_news, news_user = torch.tensor(user_news, dtype=torch.float32).to(self.device), torch.tensor(
+                news_user, dtype=torch.float32).to(self.device)
         
         return user_id, article_index, user_news, news_user, labels
 
@@ -148,7 +149,7 @@ class OriginalModule(LightningModule):
     def loss_from_batch(
             self, batch: Tuple[torch.Tensor, torch.Tensor], mode: str, ret_scores=False
     ) -> Union[torch.Tensor, Tuple[torch.Tensor, torch.Tensor, torch.Tensor]]:
-        user_indices, news_indices, user_news, news_user, labels = self.load_batch(batch, mode = mode)
+        user_indices, news_indices, user_news, news_user, labels = self.load_batch(batch, mode=mode)
 
         user_embeddings, news_embeddings = self.net(user_indices, news_indices, user_news, news_user)
         user_projected, news_projected = self.net.apply_projection(user_embeddings, news_embeddings)
@@ -229,7 +230,7 @@ class OriginalModule(LightningModule):
         )
         return {"optimizer": optimizer}
 
-    def to(self, *args: Any, **kwargs: Any) -> Self:
+    def to(self, *args: Any, **kwargs: Any) -> 'OriginalModule':
         super().to(*args, **kwargs)
         # idk why but pl doesn't call it like that
         self.net.to(*args, **kwargs)
