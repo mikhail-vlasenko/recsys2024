@@ -227,14 +227,28 @@ class EbnerdDataset(Dataset):
     def preprocess_neighbors(self):
         news_user = [[] for _ in range(self.num_articles)]
         user_news = [[] for _ in range(self.num_users)]
-        for row in self.df_behaviors.rows(named=True):
-            news_id = row[DEFAULT_INVIEW_ARTICLES_COL]
-            user_id = row[DEFAULT_USER_COL]
-        
-            if user_id not in news_user[news_id]:
-                news_user[news_id].append(user_id)
-            if news_id not in user_news[user_id]:
-                user_news[user_id].append(news_id)
+
+        if self.mode == "test":
+            for row in self.df_behaviors.rows(named=True):
+                news_id = row[DEFAULT_INVIEW_ARTICLES_COL]
+                user_id = row[DEFAULT_USER_COL]
+                print(f'news_id: {news_id}')
+                print(f'user_id: {user_id}')
+            
+                if user_id not in news_user[news_id]:
+                    news_user[news_id].append(user_id)
+                if news_id not in user_news[user_id]:
+                    user_news[user_id].append(news_id)
+
+        else:
+            for row in self.df_behaviors.rows(named=True):
+                news_id = row[DEFAULT_INVIEW_ARTICLES_COL]
+                user_id = row[DEFAULT_USER_COL]
+            
+                if user_id not in news_user[news_id]:
+                    news_user[news_id].append(user_id)
+                if news_id not in user_news[user_id]:
+                    user_news[user_id].append(news_id)
 
         for list1 in news_user:
             if not list1:
