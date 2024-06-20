@@ -3,6 +3,7 @@ import zipfile
 from pathlib import Path
 import logging
 from typing import Optional
+from collections import defaultdict
 
 from polars import DataFrame
 from tqdm import tqdm
@@ -212,7 +213,21 @@ class EbnerdDataset(Dataset):
         ]
     
     def preprocess_neighbors(self):
-        if self.mode == "train" or self.mode == "validation":
+        if self.mode == "test":
+            news_user = defaultdict(list)
+            user_news = [[] for _ in range(self.num_users)]
+
+            for row in self.df_behaviors.rows(named=True):
+                news_id = row[DEFAULT_INVIEW_ARTICLES_COL]
+                user_id = row[DEFAULT_USER_COL]
+
+                for n_id in news_id:
+                    if user_id not in news_user[n_id]:
+                        news_user[n_id].append(user_id)
+                if news_id not in user_news[user_id]:
+                    user_news[user_id].append(news_id)
+
+        else:
             news_user = [[] for _ in range(self.num_articles)]
             user_news = [[] for _ in range(self.num_users)]
 
