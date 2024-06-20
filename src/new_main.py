@@ -26,8 +26,11 @@ def main():
 
     data_download_path = EbnerdVariants.init_variant(args.ebnerd_variant).value.path
 
-    datamodule = OriginalModelDatamodule(data_download_path=data_download_path, batch_size=args.batch_size, num_workers=args.num_workers, 
-                                         api_key=args.api_key, history_size=args.history_size, fraction=args.fraction, npratio=args.npratio)
+    datamodule = OriginalModelDatamodule(
+        data_download_path=data_download_path, batch_size=args.batch_size, num_workers=args.num_workers,
+        api_key=args.api_key, history_size=args.history_size, fraction=args.fraction, npratio=args.npratio,
+        one_row_per_impression=args.one_row_impression
+    )
 
     datamodule.setup()
     train_news_title, train_news_entity, train_news_group = datamodule.data_train.get_word_ids(

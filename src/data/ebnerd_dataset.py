@@ -57,7 +57,11 @@ from src.ebrec.utils._python import (
 
 
 class EbnerdDataset(Dataset):
-    def __init__(self, root_dir, data_split, mode="train", history_size=30, fraction=1, seed=0, npratio=4, user_id_to_index=None, article_id_to_index=None):
+    def __init__(
+            self, root_dir, data_split,
+            mode="train", history_size=30, fraction=1, seed=0, npratio=4, one_row_per_impression=False,
+            user_id_to_index=None, article_id_to_index=None
+    ):
         """
         User_id_to_index and article_id_to_index are in this constructor because they can be passed to consectutive datasets
         This is useful when we want to use the same mapping for the train, validation and test sets.
@@ -68,7 +72,10 @@ class EbnerdDataset(Dataset):
         super().__init__()
 
         self.df_behaviors: DataFrame
-        self.df_behaviors, self.df_history, self.article_df = self.ebnerd_from_path(path=root_dir, history_size=history_size, mode=mode, data_split=data_split, fraction=fraction, seed=seed, npratio=npratio)
+        self.df_behaviors, self.df_history, self.article_df = self.ebnerd_from_path(
+            path=root_dir, history_size=history_size, mode=mode, data_split=data_split,
+            fraction=fraction, seed=seed, npratio=npratio, one_row_per_impression=one_row_per_impression
+        )
 
         self.num_users: int
         self.num_articles: int
@@ -240,7 +247,10 @@ class EbnerdDataset(Dataset):
 
         return user_news, news_user
 
-    def ebnerd_from_path(self, path: Path, mode: str, data_split, seed, npratio, history_size: int = 30, fraction = 1) -> tuple[pl.DataFrame, pl.LazyFrame, pl.DataFrame]:
+    def ebnerd_from_path(
+            self, path: Path, mode: str, data_split, seed, npratio,
+            history_size: int = 30, fraction=1, one_row_per_impression=False
+    ) -> tuple[pl.DataFrame, pl.LazyFrame, pl.DataFrame]:
         """
         Load ebnerd - function
         # I could add something here to select columns but I dont think its necessary for now, makes more sense to do in the loader overwrite
@@ -256,6 +266,7 @@ class EbnerdDataset(Dataset):
         data_pkl_path = Path('data') / f'{mode}_seed_{seed}.pkl'
 
         if os.path.exists(data_pkl_path):
+            print(f"\nLoading data from {data_pkl_path}\n")
             with open(data_pkl_path, 'rb') as f:
                 (df_behaviors, df_history, df_articles) = pickle.load(f)
 
@@ -303,7 +314,13 @@ class EbnerdDataset(Dataset):
                 )
 
             #unroll the inview column as rows into the dataframe 
-            df_behaviors = df_behaviors.explode('article_ids_inview','labels')
+            df_behaviors = df_behaviors.explode(DEFAULT_INVIEW_ARTICLES_COL, DEFAULT_LABELS_COL)
+
+            print(f"Loaded {len(df_behaviors)} rows")
+            if one_row_per_impression:
+                # keep only one row per impression id
+                df_behaviors = df_behaviors.unique(subset=DEFAULT_IMPRESSION_ID_COL, keep="first")
+                print(f"Kept one row per impression id, now {len(df_behaviors)} rows")
 
             #also load article data 
             df_articles = pl.read_parquet(article_path)
