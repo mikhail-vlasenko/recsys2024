@@ -230,19 +230,20 @@ class EbnerdDataset(Dataset):
 
         if self.mode == "test":
             for row in self.df_behaviors.rows(named=True):
-                news_id = row[DEFAULT_CLICKED_ARTICLES_COL] #wait why isn't this clicked articles
+                news_id = row[DEFAULT_INVIEW_ARTICLES_COL]
                 user_id = row[DEFAULT_USER_COL]
                 print(f'news_id: {news_id}')
                 print(f'user_id: {user_id}')
             
-                if user_id not in news_user[news_id]:
-                    news_user[news_id].append(user_id)
+                for n_id in news_id:
+                    if user_id not in news_user[n_id]:
+                        news_user[n_id].append(user_id)
                 if news_id not in user_news[user_id]:
                     user_news[user_id].append(news_id)
 
         else:
             for row in self.df_behaviors.rows(named=True):
-                news_id = row[DEFAULT_INVIEW_ARTICLES_COL] #wait why isn't this clicked articles
+                news_id = row[DEFAULT_INVIEW_ARTICLES_COL]
                 user_id = row[DEFAULT_USER_COL]
             
                 if user_id not in news_user[news_id]:
