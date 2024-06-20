@@ -1,0 +1,20 @@
+#!/bin/bash
+
+#SBATCH --partition=gpu
+#SBATCH --gpus=1
+#SBATCH --job-name=ResNet-Imbalanced
+#SBATCH --ntasks=1
+#SBATCH --cpus-per-task=18
+#SBATCH --time=12:00:00
+#SBATCH --output=job_logs/baseline_run-%A.out
+
+cd $HOME/RECSYS2024
+
+module purge
+module load 2023
+module load Anaconda3/2023.05
+
+conda activate recsys
+
+python -m src.new_main --ebnerd_variant ebnerd_small --num_workers 11
+
