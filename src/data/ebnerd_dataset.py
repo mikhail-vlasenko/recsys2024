@@ -234,7 +234,7 @@ class EbnerdDataset(Dataset):
                     user_news[user_id].append(news_id)
 
             #change news_user to list of lists
-            self.article_id_to_index = self.compress_article_ids(news_user=news_user)
+            self.article_id_to_index = self.compress_article_ids(news_user=news_user_dict)
             news_user = [[] for _ in range(self.num_articles)]
             for article_id, user_id in news_user_dict.items():
                 news_user[self.article_id_to_index[int(article_id)]] = user_id
