@@ -131,6 +131,8 @@ class EbnerdDataset(Dataset):
 
             print('maybe "article_id" is in "article_id_fixed"')
             print(self.df_behaviors['article_id_fixed'])
+            print('no it\'s a list if ids')
+            print([len(id_list) for id_list in self.df_behaviors['article_id_fixed']])
 
             if not exists_article_id:
                 return None
@@ -149,17 +151,18 @@ class EbnerdDataset(Dataset):
 
         article_id_to_index[np.nan] = np.nan
 
-        self.df_behaviors = self.df_behaviors.with_columns(
-            pl.col(DEFAULT_ARTICLE_ID_COL).apply(lambda article_id: article_id_to_index[int(article_id)]).alias(DEFAULT_ARTICLE_ID_COL)
-        )
-        self.df_behaviors = self.df_behaviors.with_columns(
-            pl.col(DEFAULT_INVIEW_ARTICLES_COL).apply(
-                lambda article_id: article_id_to_index[int(article_id)]
-            ).alias(DEFAULT_INVIEW_ARTICLES_COL)
-        )
-        self.article_df = self.article_df.with_columns(
-            pl.col(DEFAULT_ARTICLE_ID_COL).apply(lambda article_id: article_id_to_index[int(article_id)]).alias(DEFAULT_ARTICLE_ID_COL)
-        )
+        if self.mode != "test": #it tries to look for 'article_id in df_behaviors but there is only article_id_fixed'
+            self.df_behaviors = self.df_behaviors.with_columns(
+                pl.col(DEFAULT_ARTICLE_ID_COL).apply(lambda article_id: article_id_to_index[int(article_id)]).alias(DEFAULT_ARTICLE_ID_COL)
+            )
+            self.df_behaviors = self.df_behaviors.with_columns(
+                pl.col(DEFAULT_INVIEW_ARTICLES_COL).apply(
+                    lambda article_id: article_id_to_index[int(article_id)]
+                ).alias(DEFAULT_INVIEW_ARTICLES_COL)
+            )
+            self.article_df = self.article_df.with_columns(
+                pl.col(DEFAULT_ARTICLE_ID_COL).apply(lambda article_id: article_id_to_index[int(article_id)]).alias(DEFAULT_ARTICLE_ID_COL)
+            )
 
         return article_id_to_index
     
