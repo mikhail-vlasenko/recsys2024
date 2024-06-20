@@ -230,7 +230,7 @@ class EbnerdDataset(Dataset):
 
         if self.mode == "test":
             for row in self.df_behaviors.rows(named=True):
-                news_id = row[DEFAULT_INVIEW_ARTICLES_COL]
+                news_id = row[DEFAULT_CLICKED_ARTICLES_COL] #wait why isn't this clicked articles
                 user_id = row[DEFAULT_USER_COL]
                 print(f'news_id: {news_id}')
                 print(f'user_id: {user_id}')
@@ -242,7 +242,7 @@ class EbnerdDataset(Dataset):
 
         else:
             for row in self.df_behaviors.rows(named=True):
-                news_id = row[DEFAULT_INVIEW_ARTICLES_COL]
+                news_id = row[DEFAULT_INVIEW_ARTICLES_COL] #wait why isn't this clicked articles
                 user_id = row[DEFAULT_USER_COL]
             
                 if user_id not in news_user[news_id]:
