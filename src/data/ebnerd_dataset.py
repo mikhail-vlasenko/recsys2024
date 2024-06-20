@@ -67,8 +67,10 @@ class EbnerdDataset(Dataset):
         """
         super().__init__()
 
+        self.mode = mode
+
         self.df_behaviors: DataFrame
-        self.df_behaviors, self.df_history, self.article_df = self.ebnerd_from_path(path=root_dir, history_size=history_size, mode=mode, data_split=data_split, fraction=fraction, seed=seed, npratio=npratio)
+        self.df_behaviors, self.df_history, self.article_df = self.ebnerd_from_path(path=root_dir, history_size=history_size, mode=self.mode, data_split=data_split, fraction=fraction, seed=seed, npratio=npratio)
 
         self.num_users: int
         self.num_articles: int
@@ -290,9 +292,8 @@ class EbnerdDataset(Dataset):
                     .sample(fraction=fraction)
                 )
             if mode == "test":
-                df_behaviors = (df_behaviors
-                    .sample(fraction=fraction)
-                )
+                df_behaviors = df_behaviors.head(10) # it crashes around here because not enough memory
+                df_behaviors = df_behaviors.sample(fraction=fraction)
 
             #unroll the inview column as rows into the dataframe
             print(f'Exploding inview and labels columns...')
@@ -305,10 +306,7 @@ class EbnerdDataset(Dataset):
             #pickle the data
             print(f'Pickling data to {data_pkl_path}...')
             with open(data_pkl_path, 'wb') as f:
-                pickle.dump((df_behaviors,
-                             df_history.collect(),
-                             df_articles),
-                             f)
+                pickle.dump((df_behaviors, df_history.collect(), df_articles), f)
 
             print(f'Processing completed successfully')
             return df_behaviors, df_history, df_articles
