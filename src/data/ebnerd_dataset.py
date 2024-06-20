@@ -232,6 +232,8 @@ class EbnerdDataset(Dataset):
             for row in self.df_behaviors.rows(named=True):
                 news_id = row[DEFAULT_INVIEW_ARTICLES_COL]
                 user_id = row[DEFAULT_USER_COL]
+                print(f'self.num_articles: {self.num_articles}')
+                print(f'self.num_users: {self.num_users}')
                 print(f'news_id: {news_id}')
                 print(f'user_id: {user_id}')
             
