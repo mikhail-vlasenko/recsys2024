@@ -227,11 +227,12 @@ class EbnerdDataset(Dataset):
 
         return user_news, news_user
 
-    def add_clicked_articles_column(self,
-        df: pl.DataFrame,
-        clicked_col: str = DEFAULT_CLICKED_ARTICLES_COL
-    ) -> pl.DataFrame:
-        return df.with_columns(pl.lit(None, dtype=pl.List(pl.Int64)).alias(clicked_col))
+    # def add_clicked_articles_column(self,
+    #     df: pl.DataFrame,
+    #     inview_col: str = DEFAULT_INVIEW_ARTICLES_COL,
+    #     clicked_col: str = DEFAULT_CLICKED_ARTICLES_COL
+    # ) -> pl.DataFrame:
+    #     return df.with_columns(pl.col(inview_col).apply(lambda article_list: None).alias(clicked_col))
 
     def ebnerd_from_path(self, path: Path, mode: str, data_split, seed, npratio, history_size: int = 30, fraction = 1) -> tuple[pl.DataFrame, pl.LazyFrame, pl.DataFrame]:
         """
@@ -296,10 +297,7 @@ class EbnerdDataset(Dataset):
                     .sample(fraction=fraction)
                 )
             if mode == "test":
-                df_behaviors = df_behaviors.head(1000) #for debugging purposes
                 df_behaviors = (df_behaviors
-                    .pipe(self.add_clicked_articles_column)
-                    .pipe(create_binary_labels_column)
                     .sample(fraction=fraction)
                 )
 
