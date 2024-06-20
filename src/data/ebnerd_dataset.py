@@ -296,8 +296,9 @@ class EbnerdDataset(Dataset):
                 df_behaviors = df_behaviors.sample(fraction=fraction)
 
             #unroll the inview column as rows into the dataframe
-            print(f'Exploding inview and labels columns...')
-            df_behaviors = df_behaviors.explode('article_ids_inview','labels')
+            if mode == "train" or mode == "validation":
+                print(f'Exploding inview and labels columns...')
+                df_behaviors = df_behaviors.explode('article_ids_inview','labels')
 
             #also load article data
             print(f'Loading article data...')
