@@ -69,7 +69,7 @@ class EbnerdDataset(Dataset):
         super().__init__()
 
         self.mode = mode
-        self.len_test_set = 1000
+        self.len_test_set = 1024
 
         self.df_behaviors: DataFrame
         self.df_behaviors, self.df_history, self.article_df = self.ebnerd_from_path(path=root_dir, history_size=history_size, mode=self.mode, data_split=data_split, fraction=fraction, seed=seed, npratio=npratio)
