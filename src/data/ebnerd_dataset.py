@@ -69,6 +69,7 @@ class EbnerdDataset(Dataset):
         super().__init__()
 
         self.mode = mode
+        self.len_test_set = 1000
 
         self.df_behaviors: DataFrame
         self.df_behaviors, self.df_history, self.article_df = self.ebnerd_from_path(path=root_dir, history_size=history_size, mode=self.mode, data_split=data_split, fraction=fraction, seed=seed, npratio=npratio)
@@ -339,8 +340,10 @@ class EbnerdDataset(Dataset):
                     .sample(fraction=fraction)
                 )
             if mode == "test":
-                # df_behaviors = df_behaviors.head(10)
-                df_behaviors = df_behaviors.sample(fraction=fraction) #it crashes here in colab because not enough memory
+                df_behaviors = df_behaviors.head(self.len_test_set)
+                random_labels = np.random.randint(2, size=self.len_test_set)
+                df_behaviors = df_behaviors.with_columns(pl.Series(DEFAULT_LABELS_COL, random_labels))
+                df_behaviors = df_behaviors.sample(fraction=fraction)
 
             #unroll the inview column as rows into the dataframe
             if mode == "train" or mode == "validation":
