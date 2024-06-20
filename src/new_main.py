@@ -66,7 +66,7 @@ def main():
     )
 
     wandb_logger = WandbLogger(
-        entity="inverse_rl", project="RecSys", name=checkpoint_filename
+        entity="inverse_rl", project="RecSys", config=vars(args)
     )
 
     wandb_logger.watch(module, log="all")

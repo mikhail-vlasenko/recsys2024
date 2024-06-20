@@ -5,7 +5,7 @@ import torch
 import torch.nn.functional as F
 from lightning import LightningModule
 from torchmetrics import MinMetric, MeanMetric, classification
-from src.model.components.model import Model 
+from src.model.components.model import Model
 from src.data.data_loader import random_neighbor, optimized_random_neighbor
 import logging
 from tqdm import tqdm
@@ -34,13 +34,13 @@ class OriginalModule(LightningModule):
         self.train_user_news = train_user_news
         self.val_news_user = val_news_user
         self.val_user_news = val_user_news
-        
+
         #set up article features
         self.train_news_title, self.train_news_entity, self.train_news_group = train_article_features
         self.val_news_title, self.val_news_entity, self.val_news_group = val_article_features
         self.train_news_title, self.train_news_entity, self.train_news_group = self.train_news_title.to(self.device), self.train_news_entity.to(self.device), self.train_news_group.to(self.device)
         self.val_news_title, self.val_news_entity, self.val_news_group = self.val_news_title.to(self.device), self.val_news_entity.to(self.device), self.val_news_group.to(self.device)
-        
+
         self.net = net
 
         # loss function
@@ -60,12 +60,12 @@ class OriginalModule(LightningModule):
         # make a set-based index for edges
         self.train_user_edge_index: list[set] = []
         for i in range(len(train_user_news)):
-            self.user_edge_index.append(set(train_user_news[i]))
+            self.train_user_edge_index.append(set(train_user_news[i]))
 
         self.val_user_edge_index: list[set] = []
         for i in range(len(val_user_news)):
             self.val_user_edge_index.append(set(val_user_news[i]))
-        
+
         #TODO add test set
 
     def pre_load_neighbors(self, user_news, news_user):
@@ -129,9 +129,12 @@ class OriginalModule(LightningModule):
                 assert False, "Test mode not implemented"
             # get label matrix using a list of sets for each user
             labels = torch.empty([len(user_indices), len(user_indices)], dtype=torch.float32)
-            for i in range(len(user_indices)):
-                for j in range(len(news_indices)):
-                    labels[i, j] = 1 if j in user_edge_index[i] else 0
+            # converting to np is way faster than gpu_tensor.item()
+            np_user_indices = user_indices.cpu().numpy()
+            np_news_indices = news_indices.cpu().numpy()
+            for i in range(len(np_user_indices)):
+                for j in range(len(np_news_indices)):
+                    labels[i, j] = 1 if np_news_indices[j] in user_edge_index[np_user_indices[i]] else 0
             labels = labels.flatten().to(user_projected.device)
 
             # matmul to get a matrix of similarities
@@ -155,11 +158,11 @@ class OriginalModule(LightningModule):
         if ret_scores:
             return loss, scores, labels
         return loss
-    
+
     def on_train_start(self) -> None:
         """Lightning hook that is called when training begins.
-        We need to set the model to training mode here. -> swap out the article features to the train ones 
-        """  
+        We need to set the model to training mode here. -> swap out the article features to the train ones
+        """
         self.net.train()
         train_news_title, train_news_entity, train_news_group = self.train_news_title.to(self.device), self.train_news_entity.to(self.device), self.train_news_group.to(self.device)
         self.net.set_article_features(train_news_title, train_news_entity, train_news_group)
@@ -179,7 +182,7 @@ class OriginalModule(LightningModule):
 
         self.log("train/loss", loss, on_step=True, on_epoch=True, prog_bar=True, logger=True)
         return loss
-    
+
     def on_validation_start(self) -> None:
         """Lightning hook that is called when validation begins.
         We need to set the model to evaluation mode here. -> swap out the article features to the val ones
@@ -202,7 +205,7 @@ class OriginalModule(LightningModule):
         self.log("val/roc_auc", roc_auc, on_epoch=True, prog_bar=True, logger=True)
 
         return loss, f1, roc_auc
-    
+
     # TODO implement on_test_start
 
     def test_step(
