@@ -30,7 +30,7 @@ from src.ebrec.utils._constants import (
     DEFAULT_TITLE_COL,
     DEFAULT_USER_COL,
     DEFAULT_NER_COL,
-    DEFAULT_ENTITIES_COL, DEFAULT_ARTICLE_ID_COL
+    DEFAULT_ENTITIES_COL, DEFAULT_ARTICLE_ID_COL, DEFAULT_SCROLL_PERCENTAGE_COL, DEFAULT_READ_TIME_COL
 )
 
 from src.ebrec.utils._behaviors import (
@@ -56,12 +56,12 @@ from src.ebrec.utils._python import (
     create_lookup_objects,
 )
 
-class EbnerdDataset(Dataset):
 
-    def __init__(self, root_dir, data_split, mode = "train", history_size = 30, fraction = 1, seed = 0, npratio=4, user_id_to_index=None, article_id_to_index=None):
+class EbnerdDataset(Dataset):
+    def __init__(self, root_dir, data_split, mode="train", history_size=30, fraction=1, seed=0, npratio=4, user_id_to_index=None, article_id_to_index=None):
         """
         User_id_to_index and article_id_to_index are in this constructor because they can be passed to consectutive datasets
-        This is useful when we want to use the same mapping for the train, validation and test sets. 
+        This is useful when we want to use the same mapping for the train, validation and test sets.
         That means that for validation we start from the given input, and add the new users and articles to the mapping.
 
         self.num_users and self.num_articles will still refer to the num_users for the current dataset
@@ -88,9 +88,9 @@ class EbnerdDataset(Dataset):
         row = self.df_behaviors.row(named=True, index=idx)
 
         # Get the required columns 
-        user_id = row['user_id'] #DEFAULT_USER_COL = "user_id"
-        article_ids_clicked = row['article_ids_inview'] #DEFAULT_INVIEW_ARTICLES_COL
-        labels = row['labels'] #DEFAULT_LABELS_COL
+        user_id = row[DEFAULT_USER_COL]
+        article_ids_clicked = row[DEFAULT_INVIEW_ARTICLES_COL]
+        labels = row[DEFAULT_LABELS_COL]
 
         return user_id, article_ids_clicked, labels
     
@@ -99,7 +99,7 @@ class EbnerdDataset(Dataset):
         if user_id_to_index is None:
             # Get the unique user ids
             unique_user_ids = self.df_behaviors[DEFAULT_USER_COL].unique().to_numpy()
-            
+
             # Create a mapping from user id to index
             user_id_to_index = {user_id: index for index, user_id in enumerate(unique_user_ids)}
             self.num_users = len(user_id_to_index)
@@ -107,7 +107,7 @@ class EbnerdDataset(Dataset):
             current_unique_user_ids = self.df_behaviors[DEFAULT_USER_COL].unique().to_numpy()
             previous_unique_user_ids = np.array(list(user_id_to_index.keys()))
             unique_user_ids = np.unique(np.concatenate([current_unique_user_ids, previous_unique_user_ids]))
-            
+
             # Create a mapping from user id to index
             user_id_to_index = {user_id: index for index, user_id in enumerate(unique_user_ids)}
             self.num_users = len(user_id_to_index)
@@ -144,14 +144,19 @@ class EbnerdDataset(Dataset):
 
             article_id_to_index[np.nan] = np.nan
 
-            self.df_behaviors = self.df_behaviors.with_columns(
-                pl.col(DEFAULT_ARTICLE_ID_COL).apply(lambda article_id: article_id_to_index[int(article_id)]).alias(DEFAULT_ARTICLE_ID_COL)
-            )
-            self.df_behaviors = self.df_behaviors.with_columns(
-                pl.col(DEFAULT_INVIEW_ARTICLES_COL).apply(
-                    lambda article_id: article_id_to_index[int(article_id)]
-                ).alias(DEFAULT_INVIEW_ARTICLES_COL)
-            )
+            def replace_column(name, replace_list):
+                if replace_list:
+                    func = lambda article_ids: [article_id_to_index[int(article_id)] for article_id in article_ids]
+                else:
+                    func = lambda article_id: article_id_to_index[int(article_id)]
+                self.df_behaviors = self.df_behaviors.with_columns(
+                    pl.col(name).apply(func).alias(name)
+                )
+
+            replace_column(DEFAULT_ARTICLE_ID_COL, False)
+            replace_column(DEFAULT_CLICKED_ARTICLES_COL, True)
+            replace_column(DEFAULT_INVIEW_ARTICLES_COL, False)
+
             self.article_df = self.article_df.with_columns(
                 pl.col(DEFAULT_ARTICLE_ID_COL).apply(lambda article_id: article_id_to_index[int(article_id)]).alias(DEFAULT_ARTICLE_ID_COL)
             )
@@ -225,14 +230,16 @@ class EbnerdDataset(Dataset):
             user_news = [[] for _ in range(self.num_users)]
 
             for row in self.df_behaviors.rows(named=True):
-                news_id = row[DEFAULT_INVIEW_ARTICLES_COL]
+                news_ids = row[DEFAULT_INVIEW_ARTICLES_COL]
                 user_id = row[DEFAULT_USER_COL]
+                read_time = row[DEFAULT_READ_TIME_COL]
+                scroll_percentage = row[DEFAULT_SCROLL_PERCENTAGE_COL]
 
-                for n_id in news_id:
-                    if user_id not in news_user_dict[n_id]:
-                        news_user_dict[n_id].append(user_id)
-                if news_id not in user_news[user_id]:
-                    user_news[user_id].append(news_id)
+                for news_id in news_ids:
+                    if user_id not in news_user_dict[news_id]:
+                        news_user_dict[news_id].append([user_id, read_time, scroll_percentage])
+                    if news_id not in user_news[user_id]:
+                        user_news[user_id].append([news_id, read_time, scroll_percentage])
 
             #change news_user to list of lists
             self.article_id_to_index = self.compress_article_ids(news_user=news_user_dict)
@@ -243,22 +250,29 @@ class EbnerdDataset(Dataset):
         else:
             news_user = [[] for _ in range(self.num_articles)]
             user_news = [[] for _ in range(self.num_users)]
-
             for row in self.df_behaviors.rows(named=True):
-                news_id = row[DEFAULT_INVIEW_ARTICLES_COL]
+                news_ids = row[DEFAULT_CLICKED_ARTICLES_COL]
                 user_id = row[DEFAULT_USER_COL]
-            
-                if user_id not in news_user[news_id]:
-                    news_user[news_id].append(user_id)
-                if news_id not in user_news[user_id]:
-                    user_news[user_id].append(news_id)
+                # so teeeechnically if we have multiple articles in news_ids,
+                # we should give them different scroll percentages and read times
+                # but the train set has at most 2 of those scroll percentages and read times per list,
+                # and the test set has just one, so we'll just use the first one for all articles
+                # (most of them are singular anyway)
+                read_time = row[DEFAULT_READ_TIME_COL]
+                scroll_percentage = row[DEFAULT_SCROLL_PERCENTAGE_COL]
 
-            for list1 in news_user:
-                if not list1:
-                    list1.append(0)
-            for list2 in user_news:
-                if not list2:
-                    list2.append(0)
+                for news_id in news_ids:
+                    if user_id not in news_user[news_id]:
+                        news_user[news_id].append([user_id, read_time, scroll_percentage])
+                    if news_id not in user_news[user_id]:
+                        user_news[user_id].append([news_id, read_time, scroll_percentage])
+
+        for list1 in news_user:
+            if not list1:
+                list1.append([0, 0, 0])
+        for list2 in user_news:
+            if not list2:
+                list2.append([0, 0, 0])
 
         return user_news, news_user
 
@@ -325,8 +339,8 @@ class EbnerdDataset(Dataset):
                     .sample(fraction=fraction)
                 )
             if mode == "test":
-                df_behaviors = df_behaviors.head(10) # it crashes around here because not enough memory
-                df_behaviors = df_behaviors.sample(fraction=fraction)
+                # df_behaviors = df_behaviors.head(10)
+                df_behaviors = df_behaviors.sample(fraction=fraction) #it crashes here in colab because not enough memory
 
             #unroll the inview column as rows into the dataframe
             if mode == "train" or mode == "validation":

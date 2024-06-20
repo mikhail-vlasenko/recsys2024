@@ -1,11 +1,11 @@
 from typing import Any, Dict, Tuple, Union, Optional
-from typing_extensions import Self
 
+import numpy as np
 import torch
 import torch.nn.functional as F
 from lightning import LightningModule
 from torchmetrics import MinMetric, MeanMetric, classification
-from src.model.components.model import Model 
+from src.model.components.model import Model
 from src.data.data_loader import random_neighbor, optimized_random_neighbor
 import logging
 from tqdm import tqdm
@@ -15,8 +15,8 @@ class OriginalModule(LightningModule):
     def __init__(
         self,
         net: Model,
-        train_user_news: list[list[int]],
-        train_news_user: list[list[int]],
+        train_user_news: list[list[float]],
+        train_news_user: list[list[float]],
         val_user_news: list[list[int]],
         val_news_user: list[list[int]],
         test_user_news: list[list[int]],
@@ -39,7 +39,7 @@ class OriginalModule(LightningModule):
         self.val_user_news = val_user_news
         self.test_news_user = test_news_user
         self.test_user_news = test_user_news
-        
+
         #set up article features
         self.train_news_title, self.train_news_entity, self.train_news_group = train_article_features
         self.val_news_title, self.val_news_entity, self.val_news_group = val_article_features
@@ -66,9 +66,16 @@ class OriginalModule(LightningModule):
         self.more_labels = args.more_labels
 
         # make a set-based index for edges
-        self.user_edge_index: list[set] = []
+        self.train_user_edge_index: list[set] = []
         for i in range(len(train_user_news)):
-            self.user_edge_index.append(set(train_user_news[i]))
+            # take the first column because it's the news index
+            self.train_user_edge_index.append(set(np.array(train_user_news[i])[:, 0]))
+
+        self.val_user_edge_index: list[set] = []
+        for i in range(len(val_user_news)):
+            self.val_user_edge_index.append(set(np.array(val_user_news[i])[:, 0]))
+
+        #TODO add test set
 
     def pre_load_neighbors(self, user_news, news_user):
         user_lengths = torch.tensor([len(user_news[i]) for i in range(len(user_news))]).unsqueeze(1)#.to(device)
@@ -105,10 +112,10 @@ class OriginalModule(LightningModule):
         if self.hparams.args.optimized_subsampling:
             user_news, news_user = optimized_random_neighbor(self.hparams.args, user_news, news_user, self.user_lengths, self.news_lengths)
         else:
-            user_news, news_user = random_neighbor(self.hparams.args, user_news, news_user)
+            user_news, news_user = random_neighbor(self.hparams.args, user_news, news_user, 2)
 
-        user_news, news_user = torch.tensor(user_news, dtype=torch.long).to(self.device), torch.tensor(
-                news_user, dtype=torch.long).to(self.device)
+        user_news, news_user = torch.tensor(user_news, dtype=torch.float32).to(self.device), torch.tensor(
+                news_user, dtype=torch.float32).to(self.device)
         
         return user_id, article_index, user_news, news_user, labels
 
@@ -121,13 +128,22 @@ class OriginalModule(LightningModule):
 
         return loss
 
-    def compute_scores(self, user_projected, news_projected, user_indices, news_indices, labels):
+    def compute_scores(self, user_projected, news_projected, user_indices, news_indices, labels, mode):
         if self.more_labels:
+            if mode == "train":
+                user_edge_index = self.train_user_edge_index
+            elif mode == "val":
+                user_edge_index = self.val_user_edge_index
+            else:
+                assert False, "Test mode not implemented"
             # get label matrix using a list of sets for each user
             labels = torch.empty([len(user_indices), len(user_indices)], dtype=torch.float32)
-            for i in range(len(user_indices)):
-                for j in range(len(news_indices)):
-                    labels[i, j] = 1 if j in self.user_edge_index[i] else 0
+            # converting to np is way faster than gpu_tensor.item()
+            np_user_indices = user_indices.cpu().numpy()
+            np_news_indices = news_indices.cpu().numpy()
+            for i in range(len(np_user_indices)):
+                for j in range(len(np_news_indices)):
+                    labels[i, j] = 1 if np_news_indices[j] in user_edge_index[np_user_indices[i]] else 0
             labels = labels.flatten().to(user_projected.device)
 
             # matmul to get a matrix of similarities
@@ -141,21 +157,21 @@ class OriginalModule(LightningModule):
     def loss_from_batch(
             self, batch: Tuple[torch.Tensor, torch.Tensor], mode: str, ret_scores=False
     ) -> Union[torch.Tensor, Tuple[torch.Tensor, torch.Tensor, torch.Tensor]]:
-        user_indices, news_indices, user_news, news_user, labels = self.load_batch(batch, mode = mode)
+        user_indices, news_indices, user_news, news_user, labels = self.load_batch(batch, mode=mode)
 
         user_embeddings, news_embeddings = self.net(user_indices, news_indices, user_news, news_user)
         user_projected, news_projected = self.net.apply_projection(user_embeddings, news_embeddings)
-        scores, labels = self.compute_scores(user_projected, news_projected, user_indices, news_indices, labels)
+        scores, labels = self.compute_scores(user_projected, news_projected, user_indices, news_indices, labels, mode=mode)
         loss = self.compute_loss(scores, labels, user_embeddings, news_embeddings)
 
         if ret_scores:
             return loss, scores, labels
         return loss
-    
+
     def on_train_start(self) -> None:
         """Lightning hook that is called when training begins.
-        We need to set the model to training mode here. -> swap out the article features to the train ones 
-        """  
+        We need to set the model to training mode here. -> swap out the article features to the train ones
+        """
         self.net.train()
         train_news_title, train_news_entity, train_news_group = self.train_news_title.to(self.device), self.train_news_entity.to(self.device), self.train_news_group.to(self.device)
         self.net.set_article_features(train_news_title, train_news_entity, train_news_group)
@@ -175,7 +191,7 @@ class OriginalModule(LightningModule):
 
         self.log("train/loss", loss, on_step=True, on_epoch=True, prog_bar=True, logger=True)
         return loss
-    
+
     def on_validation_start(self) -> None:
         """Lightning hook that is called when validation begins.
         We need to set the model to evaluation mode here. -> swap out the article features to the val ones
@@ -198,7 +214,7 @@ class OriginalModule(LightningModule):
         self.log("val/roc_auc", roc_auc, on_epoch=True, prog_bar=True, logger=True)
 
         return loss, f1, roc_auc
-    
+
     # TODO implement on_test_start
 
     def test_step(
@@ -222,7 +238,7 @@ class OriginalModule(LightningModule):
         )
         return {"optimizer": optimizer}
 
-    def to(self, *args: Any, **kwargs: Any) -> Self:
+    def to(self, *args: Any, **kwargs: Any) -> 'OriginalModule':
         super().to(*args, **kwargs)
         # idk why but pl doesn't call it like that
         self.net.to(*args, **kwargs)
