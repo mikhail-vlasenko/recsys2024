@@ -104,7 +104,6 @@ class EbnerdDataset(Dataset):
             labels = 0 #making it none is not allowed 
         else:
             labels = row[DEFAULT_LABELS_COL]
-        print(user_id, article_ids_clicked, labels)
 
         return user_id, article_ids_clicked, labels
     
@@ -119,11 +118,9 @@ class EbnerdDataset(Dataset):
             self.num_users = len(user_id_to_index)
         else:
             current_unique_user_ids = self.df_behaviors[DEFAULT_USER_COL].unique().to_numpy()
-            previous_unique_user_ids = np.array(list(user_id_to_index.keys()))
-            unique_user_ids = np.unique(np.concatenate([current_unique_user_ids, previous_unique_user_ids]))
-
-            # Create a mapping from user id to index
-            user_id_to_index = {user_id: index for index, user_id in enumerate(unique_user_ids)}
+            for user_id in current_unique_user_ids:
+                if user_id not in user_id_to_index:
+                    user_id_to_index[user_id] = len(user_id_to_index)
             self.num_users = len(user_id_to_index)
 
         # Replace the user ids with the index
@@ -134,17 +131,15 @@ class EbnerdDataset(Dataset):
         return user_id_to_index
 
     def compress_article_ids(self, article_id_to_index=None, news_user=None) -> dict[int, int]:
-        
         if article_id_to_index is None:
             unique_article_ids = self.article_df[DEFAULT_ARTICLE_ID_COL].unique().to_numpy()
             article_id_to_index = {user_id: index for index, user_id in enumerate(unique_article_ids)}
             self.num_articles = len(article_id_to_index)
         else:
             current_unique_article_ids = self.article_df[DEFAULT_ARTICLE_ID_COL].unique().to_numpy()
-            previous_unique_article_ids = np.array(list(article_id_to_index.keys()))
-            unique_article_ids = np.unique(np.concatenate([current_unique_article_ids, previous_unique_article_ids]))
-
-            article_id_to_index = {article_id: index for index, article_id in enumerate(unique_article_ids)}
+            for article_id in current_unique_article_ids:
+                if article_id not in article_id_to_index:
+                    article_id_to_index[article_id] = len(article_id_to_index)
             self.num_articles = len(article_id_to_index)
 
         article_id_to_index[np.nan] = np.nan
@@ -153,7 +148,6 @@ class EbnerdDataset(Dataset):
             if replace_list:
                 func = lambda article_ids: [article_id_to_index[int(article_id)] for article_id in article_ids]
             else:
-                print(article_id_to_index)
                 func = lambda article_id: article_id_to_index[int(article_id)]
             self.df_behaviors = self.df_behaviors.with_columns(
                 pl.col(name).apply(func).alias(name)
@@ -165,7 +159,6 @@ class EbnerdDataset(Dataset):
             replace_column(DEFAULT_INVIEW_ARTICLES_COL, False)
         if self.mode == "test":
             replace_column(DEFAULT_INVIEW_ARTICLES_COL, False)
-            print(self.df_behaviors[DEFAULT_INVIEW_ARTICLES_COL].keys())
 
         self.article_df = self.article_df.with_columns(
             pl.col(DEFAULT_ARTICLE_ID_COL).apply(lambda article_id: article_id_to_index[int(article_id)]).alias(DEFAULT_ARTICLE_ID_COL)

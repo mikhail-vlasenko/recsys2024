@@ -40,10 +40,8 @@ def main():
         max_title_length=args.title_len, max_entity_length=40, max_group_length=40
     )
 
-    
-
     #the last created dataset has the largest numeber
-    n_users = datamodule.data_val.num_users + datamodule.data_test.num_users
+    n_users = datamodule.data_test.num_users
     train_user_news, train_news_user = datamodule.data_train.preprocess_neighbors()
     val_user_news, val_news_user = datamodule.data_val.preprocess_neighbors()
     test_user_news, test_news_user = datamodule.data_test.preprocess_neighbors()
