@@ -1,3 +1,4 @@
+from src.ebrec.utils._constants import DEFAULT_IMPRESSION_ID_COL
 from src.utils.get_training_args import get_training_args
 from src.data.original_model_datamodule import OriginalModelDatamodule
 from src.data.ebnerd_variants import EbnerdVariants
@@ -10,6 +11,8 @@ from lightning.pytorch.callbacks import (
     EarlyStopping,
     DeviceStatsMonitor,
 )
+import polars as pl
+from ebrec.utils._python import write_submission_file, rank_predictions_by_score
 from lightning.pytorch.loggers import WandbLogger
 from src.model.original_lightning_module import OriginalModule
 from src.model.components.model import Model
@@ -100,7 +103,20 @@ def main():
 
     trainer = L.Trainer(**trainer_args)
     trainer.test(module, datamodule)
-    trainer.fit(module, datamodule)
+
+    test_df: pl.DataFrame = datamodule.data_test.df_behaviors
+    test_df = test_df.with_columns(pl.Series("scores", module.test_predictions))
+    test_df.with_columns(
+        pl.col("scores")
+        .map_elements(lambda x: list(rank_predictions_by_score(x)))
+        .alias("ranked_scores")
+    )
+    write_submission_file(
+        impression_ids=test_df[DEFAULT_IMPRESSION_ID_COL],
+        prediction_scores=test_df["ranked_scores"],
+    )
+
+    # trainer.fit(module, datamodule)
 
 
 if __name__ == "__main__":

@@ -265,7 +265,7 @@ class EbnerdDataset(Dataset):
     def ebnerd_from_path(
             self, path: Path, mode: str, data_split, seed, npratio,
             history_size: int = 30, fraction=1, one_row_per_impression=False
-    ) -> tuple[pl.DataFrame, pl.LazyFrame, pl.DataFrame]:
+    ):
         """
         Load ebnerd - function
         # I could add something here to select columns but I dont think its necessary for now, makes more sense to do in the loader overwrite

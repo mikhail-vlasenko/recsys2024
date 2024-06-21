@@ -81,6 +81,8 @@ class OriginalModule(LightningModule):
         self.val_user_edge_index: list[set] = []
         for i in range(len(val_user_news)):
             self.val_user_edge_index.append(set(np.array(val_user_news[i])[:, 0]))
+
+        self.test_predictions = []
         
         #TODO add test set
 
@@ -161,7 +163,6 @@ class OriginalModule(LightningModule):
 
         return scores, labels
 
-
     def loss_from_batch(
             self, batch: Tuple[torch.Tensor, torch.Tensor], mode: str, ret_scores=False
     ) -> Union[torch.Tensor, Tuple[torch.Tensor, torch.Tensor, torch.Tensor]]:
@@ -219,7 +220,6 @@ class OriginalModule(LightningModule):
         val_news_title, val_news_entity, val_news_group = self.val_news_title.to(self.device), self.val_news_entity.to(self.device), self.val_news_group.to(self.device)
         self.net.set_article_features(val_news_title, val_news_entity, val_news_group)
 
-
     def validation_step(
         self, batch: Tuple[torch.Tensor, torch.Tensor], batch_idx: int
     ) -> torch.Tensor:
@@ -253,6 +253,8 @@ class OriginalModule(LightningModule):
     ) -> torch.Tensor:
         
         loss, scores, labels = self.loss_from_batch(batch, mode="test", ret_scores=True)
+
+        self.test_predictions += [scores.cpu().detach().numpy()]
         
         #self.metrics.labels += [labels.detach().numpy()]
         #self.metrics.predictions += [scores.detach().numpy()]
