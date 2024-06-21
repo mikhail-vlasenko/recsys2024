@@ -18,6 +18,7 @@ class OriginalModelDatamodule(LightningDataModule):
         history_size: int = 30,
         fraction: float = 1.0,
         npratio: int = 4,
+        one_row_per_impression: bool = False,
     ) -> None:
         super().__init__()
     
@@ -50,11 +51,24 @@ class OriginalModelDatamodule(LightningDataModule):
 
         # load and split datasets only if not loaded already
         if not self.data_train and not self.data_val and not self.data_test:
-            self.data_train: Optional[EbnerdDataset] = EbnerdDataset(root_dir=self.hparams.root_dir, data_split=self.data_split, mode="train", 
-                                                                     history_size=self.hparams.history_size, fraction=self.hparams.fraction, npratio=self.hparams.npratio)
-            self.data_val: Optional[EbnerdDataset] = EbnerdDataset(root_dir=self.hparams.root_dir, data_split=self.data_split, mode="validation", 
-                                                                   history_size=self.hparams.history_size, fraction=self.hparams.fraction, npratio=self.hparams.npratio,
-                                                                   user_id_to_index=self.data_train.user_id_to_index, article_id_to_index=self.data_train.article_id_to_index)
+            dataset_params = {
+                "root_dir": self.hparams.root_dir,
+                "data_split": self.data_split,
+                "history_size": self.hparams.history_size,
+                "fraction": self.hparams.fraction,
+                "npratio": self.hparams.npratio,
+            }
+            self.data_train: Optional[EbnerdDataset] = EbnerdDataset(
+                mode="train", one_row_per_impression=self.hparams.one_row_per_impression, **dataset_params
+            )
+            self.data_val: Optional[EbnerdDataset] = EbnerdDataset(
+                mode="validation",
+                user_id_to_index=self.data_train.user_id_to_index,
+                article_id_to_index=self.data_train.article_id_to_index,
+                one_row_per_impression=self.hparams.one_row_per_impression,
+                **dataset_params
+            )
+            # one_row_per_impression should probably always be false for test
             #self.data_test: Optional[EbnerdDataset] = EbnerdDataset(root_dir=self.hparams.root_dir, data_split=self.data_split, mode="test")
 
     def train_dataloader(self) -> DataLoader[Any]:
@@ -67,7 +81,6 @@ class OriginalModelDatamodule(LightningDataModule):
             batch_size=self.batch_size_per_device,
             num_workers=self.hparams.num_workers,
             pin_memory=self.hparams.pin_memory,
-            drop_last=True,  #code breaks if last isnt dropped 
             shuffle=True,
         )
 
@@ -81,7 +94,6 @@ class OriginalModelDatamodule(LightningDataModule):
             batch_size=self.batch_size_per_device,
             num_workers=self.hparams.num_workers,
             pin_memory=self.hparams.pin_memory,
-            drop_last=True,  #code breaks if last isnt dropped 
             shuffle=False,
         )
 
@@ -95,7 +107,6 @@ class OriginalModelDatamodule(LightningDataModule):
             batch_size=self.batch_size_per_device,
             num_workers=self.hparams.num_workers,
             pin_memory=self.hparams.pin_memory,
-            drop_last=True, #code breaks if last isnt dropped 
             shuffle=False,
         )
 
