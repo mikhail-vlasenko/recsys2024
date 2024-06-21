@@ -248,6 +248,8 @@ class EbnerdDataset(Dataset):
             # (most of them are singular anyway)
             read_time = row[DEFAULT_READ_TIME_COL]
             scroll_percentage = row[DEFAULT_SCROLL_PERCENTAGE_COL]
+            print(len(news_user))
+            print(news_id)
 
             for news_id in news_ids:
                 if user_id not in news_user[news_id]:
