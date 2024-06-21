@@ -279,11 +279,11 @@ class EbnerdDataset(Dataset):
 
         data_pkl_path = Path('data') / f'{mode}_seed_{seed}.pkl'
 
-        if os.path.exists(data_pkl_path):
+        if not os.path.exists(data_pkl_path):
             with open(data_pkl_path, 'rb') as f:
-                (df_behaviors, df_history, df_articles) = pickle.load(f)
+                (df_behaviors, df_history, df_articles, df_before_explode) = pickle.load(f)
 
-            return df_behaviors, df_history, df_articles
+            return df_behaviors, df_history, df_articles, df_before_explode
 
         else:
             if self.mode == "test":
@@ -357,7 +357,7 @@ class EbnerdDataset(Dataset):
             #pickle the data
             print(f'Pickling data to {data_pkl_path}...')
             with open(data_pkl_path, 'wb') as f:
-                pickle.dump((df_behaviors, df_history.collect(), df_articles), f)
+                pickle.dump((df_behaviors, df_history.collect(), df_articles, behaviors_before_explode), f)
 
             print(f'Processing completed successfully')
             return df_behaviors, df_history, df_articles, behaviors_before_explode
