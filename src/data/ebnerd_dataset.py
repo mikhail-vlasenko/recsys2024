@@ -69,6 +69,8 @@ class EbnerdDataset(Dataset):
         super().__init__()
 
         self.mode = mode
+        self.first_n_test_rows = 1000
+        self.max_inview_articles_at_test_time = 100
 
         self.df_behaviors: DataFrame
         self.df_behaviors, self.df_history, self.article_df = self.ebnerd_from_path(path=root_dir, history_size=history_size, mode=self.mode, data_split=data_split, fraction=fraction, seed=seed, npratio=npratio)
@@ -90,7 +92,14 @@ class EbnerdDataset(Dataset):
         # Get the required columns 
         user_id = row[DEFAULT_USER_COL]
         article_ids_clicked = row[DEFAULT_INVIEW_ARTICLES_COL]
-        labels = row[DEFAULT_LABELS_COL]
+        if self.mode == "test":
+            #pad lists so batches don't contain varying lengths
+            #confusingly this is a list in the test set and a singleton id in train/val sets
+            article_ids_clicked = [lst + [-1] * (self.max_inview_articles_at_test_time - len(lst))
+                                   for lst in article_ids_clicked]
+            labels = None
+        else:
+            labels = row[DEFAULT_LABELS_COL]
 
         return user_id, article_ids_clicked, labels
     
@@ -339,8 +348,8 @@ class EbnerdDataset(Dataset):
                     .sample(fraction=fraction)
                 )
             if mode == "test":
-                # df_behaviors = df_behaviors.head(10)
-                df_behaviors = df_behaviors.sample(fraction=fraction) #it crashes here in colab because not enough memory
+                df_behaviors = df_behaviors.head(self.first_n_test_rows)
+                df_behaviors = df_behaviors.sample(fraction=fraction)
 
             #unroll the inview column as rows into the dataframe
             if mode == "train" or mode == "validation":

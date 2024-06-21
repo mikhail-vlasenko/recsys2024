@@ -75,8 +75,6 @@ class OriginalModule(LightningModule):
         for i in range(len(val_user_news)):
             self.val_user_edge_index.append(set(np.array(val_user_news[i])[:, 0]))
 
-        #TODO add test set
-
     def pre_load_neighbors(self, user_news, news_user):
         user_lengths = torch.tensor([len(user_news[i]) for i in range(len(user_news))]).unsqueeze(1)#.to(device)
         news_lengths = torch.tensor([len(news_user[i]) for i in range(len(news_user))]).unsqueeze(1)#.to(device)
@@ -107,7 +105,7 @@ class OriginalModule(LightningModule):
         elif mode == "val":
             user_news, news_user = self.val_user_news, self.val_news_user
         elif mode == "test":
-            assert False, "Test mode not implemented"
+            user_news, news_user = self.test_user_news, self.test_news_user
 
         if self.hparams.args.optimized_subsampling:
             user_news, news_user = optimized_random_neighbor(self.hparams.args, user_news, news_user, self.user_lengths, self.news_lengths)
@@ -116,6 +114,16 @@ class OriginalModule(LightningModule):
 
         user_news, news_user = torch.tensor(user_news, dtype=torch.float32).to(self.device), torch.tensor(
                 news_user, dtype=torch.float32).to(self.device)
+
+        if mode == "test":
+            article_index = article_index[article_index >= 0]
+            article_score = np.zeros_like(article_index)
+            for i, article_id in enumerate(article_index):
+                user_embeddings, news_embeddings = self.net(user_id, article_id, user_news, news_user)
+                user_projected, news_projected = self.net.apply_projection(user_embeddings, news_embeddings)
+                score, _ = self.compute_scores(user_projected, news_projected, user_id, article_id, labels=None, mode=mode)
+                article_score[i] = score
+            labels = (article_score > 0.5).astype(int)
         
         return user_id, article_index, user_news, news_user, labels
 
@@ -129,7 +137,7 @@ class OriginalModule(LightningModule):
         return loss
 
     def compute_scores(self, user_projected, news_projected, user_indices, news_indices, labels, mode):
-        if self.more_labels:
+        if self.more_labels and mode != "test":
             if mode == "train":
                 user_edge_index = self.train_user_edge_index
             elif mode == "val":
