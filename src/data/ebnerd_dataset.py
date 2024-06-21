@@ -348,8 +348,10 @@ class EbnerdDataset(Dataset):
                 print(f'Exploding inview and labels columns...')
                 df_behaviors = df_behaviors.explode('article_ids_inview','labels')
 
-            #also load article data
-            print(f'Loading article data...')
+            #print the percentage of positive versus negative labels in the val and train datasets
+            print(f"Percentage of positive labels in {mode} data: {df_behaviors.filter(pl.col('labels') == 1).height / df_behaviors.height}")
+
+            #also load article data 
             df_articles = pl.read_parquet(article_path)
 
             #pickle the data

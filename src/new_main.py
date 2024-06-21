@@ -75,20 +75,26 @@ def main():
         mode="min",
     )
 
+    early_stopping_callback = EarlyStopping(
+        monitor="val/auc", patience=3, mode="max"
+    )
+
     wandb_logger = WandbLogger(
         entity="inverse_rl", project="RecSys", config=vars(args)
     )
 
     wandb_logger.watch(module, log="all")
 
-    callbacks = [checkpoint_callback]
+    callbacks = [checkpoint_callback, early_stopping_callback]
 
     trainer_args = {
         "callbacks": callbacks,
         "enable_checkpointing": True,
         "logger": wandb_logger,
         "accelerator": device_name,
-        "devices": "auto"
+        "devices": "auto",
+        "limit_train_batches": 1,
+        "limit_val_batches": 10,
     }
 
     trainer = L.Trainer(**trainer_args)
