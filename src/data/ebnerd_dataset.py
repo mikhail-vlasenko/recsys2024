@@ -73,7 +73,7 @@ class EbnerdDataset(Dataset):
 
         if train_df_behaviors is None:
             self.df_behaviors: DataFrame
-            self.df_behaviors, _, self.article_df = self.ebnerd_from_path(path=root_dir, history_size=history_size, mode=self.mode, data_split=data_split, fraction=fraction, seed=seed, npratio=npratio)
+            self.df_behaviors, _, self.article_df, _ = self.ebnerd_from_path(path=root_dir, history_size=history_size, mode=self.mode, data_split=data_split, fraction=fraction, seed=seed, npratio=npratio)
             self.train_df_behaviors = self.df_behaviors
         else:
             # if mode is test or val we still need to use the train_df_behaviors for the edges 
