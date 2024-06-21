@@ -254,7 +254,7 @@ class OriginalModule(LightningModule):
         
         loss, scores, labels = self.loss_from_batch(batch, mode="test", ret_scores=True)
 
-        self.test_predictions += [scores.cpu().detach().numpy()]
+        self.test_predictions.extend(list(scores.cpu().detach().numpy()))
         
         #self.metrics.labels += [labels.detach().numpy()]
         #self.metrics.predictions += [scores.detach().numpy()]
