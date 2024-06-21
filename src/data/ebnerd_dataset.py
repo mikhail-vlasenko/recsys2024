@@ -163,6 +163,7 @@ class EbnerdDataset(Dataset):
             #we should only use article clicked if in train mode
             replace_column(DEFAULT_INVIEW_ARTICLES_COL, False)
         if self.mode == "test":
+            replace_column(DEFAULT_ARTICLE_ID_COL, False)
             replace_column(DEFAULT_INVIEW_ARTICLES_COL, False)
 
         self.article_df = self.article_df.with_columns(
@@ -288,28 +289,22 @@ class EbnerdDataset(Dataset):
 
         else:
             if self.mode == "test":
-                    df_history = (
-                        pl.scan_parquet(path.joinpath("history.parquet"))
-                        .select(DEFAULT_USER_COL, DEFAULT_HISTORY_ARTICLE_ID_COL)
-                        .pipe(
-                            truncate_history,
-                            column=DEFAULT_HISTORY_ARTICLE_ID_COL,
-                            history_size=history_size,
-                            padding_value=0,
-                            enable_warning=False,
-                        )
-                    )
-            df_history = (
-                pl.scan_parquet(path.joinpath("history.parquet"))
-                .select(DEFAULT_USER_COL, DEFAULT_HISTORY_ARTICLE_ID_COL)
-                .pipe(
-                    truncate_history,
-                    column=DEFAULT_HISTORY_ARTICLE_ID_COL,
-                    history_size=history_size,
-                    padding_value=0,
-                    enable_warning=False,
+                df_history = (
+                    pl.scan_parquet(path.joinpath("history.parquet"))
+                    .select(DEFAULT_USER_COL, DEFAULT_HISTORY_ARTICLE_ID_COL)
                 )
-            )
+            else:
+                df_history = (
+                    pl.scan_parquet(path.joinpath("history.parquet"))
+                    .select(DEFAULT_USER_COL, DEFAULT_HISTORY_ARTICLE_ID_COL)
+                    .pipe(
+                        truncate_history,
+                        column=DEFAULT_HISTORY_ARTICLE_ID_COL,
+                        history_size=history_size,
+                        padding_value=0,
+                        enable_warning=False,
+                    )
+                )
             df_behaviors = (
                 pl.scan_parquet(path.joinpath("behaviors.parquet"))
                 .collect()
