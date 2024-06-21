@@ -273,7 +273,7 @@ class Model(nn.Module):
         return pool
     
     def set_article_features(self, news_title, news_entity, news_group):
-        self.news_title = news_title
+        self.title = news_title
         self.news_entity = news_entity
         self.news_group = news_group
 
