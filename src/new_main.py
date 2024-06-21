@@ -1,3 +1,6 @@
+import numpy as np
+
+from src.ebrec.utils._behaviors import add_prediction_scores
 from src.ebrec.utils._constants import DEFAULT_IMPRESSION_ID_COL
 from src.utils.get_training_args import get_training_args
 from src.data.original_model_datamodule import OriginalModelDatamodule
@@ -12,7 +15,7 @@ from lightning.pytorch.callbacks import (
     DeviceStatsMonitor,
 )
 import polars as pl
-from ebrec.utils._python import write_submission_file, rank_predictions_by_score
+from src.ebrec.utils._python import write_submission_file, rank_predictions_by_score
 from lightning.pytorch.loggers import WandbLogger
 from src.model.original_lightning_module import OriginalModule
 from src.model.components.model import Model
@@ -97,16 +100,16 @@ def main():
         "logger": wandb_logger,
         "accelerator": device_name,
         "devices": "auto",
-        "limit_train_batches": 1,
-        "limit_val_batches": 10,
+        'max_epochs': args.n_epochs,
     }
 
     trainer = L.Trainer(**trainer_args)
     trainer.test(module, datamodule)
 
-    test_df: pl.DataFrame = datamodule.data_test.df_behaviors
-    test_df = test_df.with_columns(pl.Series("scores", module.test_predictions))
-    test_df.with_columns(
+    test_df: pl.DataFrame = datamodule.data_test.behaviors_before_explode
+    scores = np.array(module.test_predictions)[..., np.newaxis]
+    test_df = add_prediction_scores(test_df, scores.tolist())
+    test_df = test_df.with_columns(
         pl.col("scores")
         .map_elements(lambda x: list(rank_predictions_by_score(x)))
         .alias("ranked_scores")

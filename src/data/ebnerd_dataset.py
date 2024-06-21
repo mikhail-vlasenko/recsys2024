@@ -72,7 +72,6 @@ class EbnerdDataset(Dataset):
 
         self.mode = mode
         self.first_n_test_rows = 1000
-        self.max_inview_articles_at_test_time = 100
 
         if train_df_behaviors is None:
             self.df_behaviors: DataFrame
