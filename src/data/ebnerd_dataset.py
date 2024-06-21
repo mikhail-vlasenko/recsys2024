@@ -163,7 +163,7 @@ class EbnerdDataset(Dataset):
             #we should only use article clicked if in train mode
             replace_column(DEFAULT_INVIEW_ARTICLES_COL, False)
         if self.mode == "test":
-            replace_column(DEFAULT_INVIEW_ARTICLES_COL, True)
+            replace_column(DEFAULT_INVIEW_ARTICLES_COL, False)
 
         self.article_df = self.article_df.with_columns(
             pl.col(DEFAULT_ARTICLE_ID_COL).apply(lambda article_id: article_id_to_index[int(article_id)]).alias(DEFAULT_ARTICLE_ID_COL)
