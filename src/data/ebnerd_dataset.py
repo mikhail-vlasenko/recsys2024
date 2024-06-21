@@ -159,9 +159,8 @@ class EbnerdDataset(Dataset):
             self.df_behaviors = self.df_behaviors.with_columns(
                 pl.col(name).apply(func).alias(name)
             )
-
-        replace_column(DEFAULT_ARTICLE_ID_COL, False)
         if self.mode == "train":
+            replace_column(DEFAULT_ARTICLE_ID_COL, False)
             replace_column(DEFAULT_CLICKED_ARTICLES_COL, True)
             #we should only use article clicked if in train mode
         replace_column(DEFAULT_INVIEW_ARTICLES_COL, False)
