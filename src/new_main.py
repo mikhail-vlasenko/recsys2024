@@ -3,6 +3,7 @@ import numpy as np
 from src.ebrec.utils._behaviors import add_prediction_scores
 from src.ebrec.utils._constants import DEFAULT_IMPRESSION_ID_COL
 from src.utils.get_training_args import get_training_args
+from src.utils.print_mean_std import print_mean_std
 from src.data.original_model_datamodule import OriginalModelDatamodule
 from src.data.ebnerd_variants import EbnerdVariants
 
@@ -24,18 +25,11 @@ from transformers import BertTokenizer, BertModel
 device_name = "cuda" if torch.cuda.is_available() else "cpu"
 device = torch.device(device_name)
 
-
-def main():
-    args = get_training_args()
-    
-    wandb.login()
-
-    data_download_path = EbnerdVariants.init_variant(args.ebnerd_variant).value.path
-
+def train_and_test(data_download_path: str, args):
     datamodule = OriginalModelDatamodule(
         data_download_path=data_download_path, batch_size=args.batch_size, num_workers=args.num_workers,
         api_key=args.api_key, history_size=args.history_size, fraction=args.fraction, npratio=args.npratio,
-        one_row_per_impression=args.one_row_impression
+        one_row_per_impression=args.one_row_impression, seed = args.seed
     )
 
     datamodule.setup()
@@ -118,8 +112,27 @@ def main():
         impression_ids=test_df[DEFAULT_IMPRESSION_ID_COL],
         prediction_scores=test_df["ranked_scores"],
     )
-
     # trainer.fit(module, datamodule)
+    metrics = None #compute metrics from the submission file
+    wandb_logger.log(metrics)
+    return metrics
+
+def main():
+    args = get_training_args()
+    
+    wandb.login()
+
+    data_download_path = EbnerdVariants.init_variant(args.ebnerd_variant).value.path
+    metrics_list = []
+    for i in range(args.num_runs):
+        seed = args.seeds[i]
+        args.seed = seed
+        metrics = train_and_test(data_download_path=data_download_path, args=args)
+        metrics_list.append(metrics)
+
+    print_mean_std(metrics_list)
+
+   
 
 
 if __name__ == "__main__":
