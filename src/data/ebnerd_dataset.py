@@ -281,7 +281,7 @@ class EbnerdDataset(Dataset):
 
         data_pkl_path = Path('data') / f'{mode}_seed_{seed}.pkl'
 
-        if os.path.exists(data_pkl_path):
+        if False: #os.path.exists(data_pkl_path):
             print(f"\nLoading data from {data_pkl_path}\n")
             with open(data_pkl_path, 'rb') as f:
                 (df_behaviors, df_history, df_articles, df_before_explode) = pickle.load(f)
@@ -297,7 +297,7 @@ class EbnerdDataset(Dataset):
                 df_behaviors = (
                     pl.scan_parquet(path.joinpath("behaviors.parquet"))
                     .collect()
-                    .select(DEFAULT_USER_COL, DEFAULT_INVIEW_ARTICLES_COL, DEFAULT_READ_TIME_COL, DEFAULT_SCROLL_PERCENTAGE_COL, DEFAULT_ARTICLE_ID_COL, DEFAULT_CLICKED_ARTICLES_COL)
+                    .select(DEFAULT_USER_COL, DEFAULT_INVIEW_ARTICLES_COL, DEFAULT_READ_TIME_COL, DEFAULT_SCROLL_PERCENTAGE_COL)
                     .pipe(
                         slice_join_dataframes,
                         df2=df_history.collect(),
@@ -321,7 +321,7 @@ class EbnerdDataset(Dataset):
                 df_behaviors = (
                     pl.scan_parquet(path.joinpath("behaviors.parquet"))
                     .collect()
-                    .select(DEFAULT_USER_COL, DEFAULT_INVIEW_ARTICLES_COL, DEFAULT_READ_TIME_COL, DEFAULT_SCROLL_PERCENTAGE_COL, DEFAULT_ARTICLE_ID_COL, DEFAULT_CLICKED_ARTICLES_COL, DEFAULT_LABELS_COL)
+                    .select(DEFAULT_USER_COL, DEFAULT_INVIEW_ARTICLES_COL, DEFAULT_READ_TIME_COL, DEFAULT_SCROLL_PERCENTAGE_COL, DEFAULT_ARTICLE_ID_COL, DEFAULT_CLICKED_ARTICLES_COL)
                     .pipe(
                         slice_join_dataframes,
                         df2=df_history.collect(),
@@ -349,8 +349,8 @@ class EbnerdDataset(Dataset):
                     .sample(fraction=fraction)
                 )
             if mode == "test":
-                pass
-                #df_behaviors = df_behaviors.head(self.first_n_test_rows)
+                
+                df_behaviors = df_behaviors.head(5000000)
                 #df_behaviors = df_behaviors.sample(fraction=fraction)
 
             behaviors_before_explode = df_behaviors
