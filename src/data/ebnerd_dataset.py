@@ -250,7 +250,7 @@ class EbnerdDataset(Dataset):
             
 
             for news_id in news_ids:
-                print(news_id)
+                #print(news_id)
                 if user_id not in news_user[news_id]:
                     news_user[news_id].append([user_id, read_time, scroll_percentage])
                 if news_id not in user_news[user_id]:
