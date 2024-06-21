@@ -104,6 +104,7 @@ class EbnerdDataset(Dataset):
             labels = None
         else:
             labels = row[DEFAULT_LABELS_COL]
+        print(user_id, article_ids_clicked, labels)
 
         return user_id, article_ids_clicked, labels
     
