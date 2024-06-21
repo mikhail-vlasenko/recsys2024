@@ -63,7 +63,9 @@ def main():
                             train_article_features=(torch.tensor(train_news_title), torch.tensor(train_news_entity), torch.tensor(train_news_group)),
                             val_article_features=(torch.tensor(val_news_title), torch.tensor(val_news_entity), torch.tensor(val_news_group)),
                             test_article_features=(torch.tensor(test_news_title), torch.tensor(test_news_entity), torch.tensor(test_news_group)),
-                            n_users=n_users)
+                            n_users=n_users,
+                            val_df_behaviors=datamodule.data_val.behaviors_before_explode,
+                            test_df_behaviors=datamodule.data_test.behaviors_before_explode)
     
     checkpoint_filename = f"{args.ebnerd_variant}-original-model"
     checkpoint_callback = ModelCheckpoint(
@@ -90,6 +92,7 @@ def main():
     }
 
     trainer = L.Trainer(**trainer_args)
+    trainer.test(module, datamodule)
     trainer.fit(module, datamodule)
 
 

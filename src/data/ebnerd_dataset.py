@@ -58,7 +58,7 @@ from src.ebrec.utils._python import (
 
 
 class EbnerdDataset(Dataset):
-    def __init__(self, root_dir, data_split, mode="train", history_size=30, fraction=1, seed=0, npratio=4, user_id_to_index=None, article_id_to_index=None):
+    def __init__(self, root_dir, data_split, mode="train", history_size=30, fraction=1, seed=0, npratio=4, user_id_to_index=None, article_id_to_index=None, train_df_behaviors=None):
         """
         User_id_to_index and article_id_to_index are in this constructor because they can be passed to consectutive datasets
         This is useful when we want to use the same mapping for the train, validation and test sets.
@@ -72,14 +72,20 @@ class EbnerdDataset(Dataset):
         self.first_n_test_rows = 1000
         self.max_inview_articles_at_test_time = 100
 
-        self.df_behaviors: DataFrame
-        self.df_behaviors, self.df_history, self.article_df = self.ebnerd_from_path(path=root_dir, history_size=history_size, mode=self.mode, data_split=data_split, fraction=fraction, seed=seed, npratio=npratio)
+        if train_df_behaviors is None:
+            self.df_behaviors: DataFrame
+            self.df_behaviors, _, self.article_df = self.ebnerd_from_path(path=root_dir, history_size=history_size, mode=self.mode, data_split=data_split, fraction=fraction, seed=seed, npratio=npratio)
+            self.train_df_behaviors = self.df_behaviors
+        else:
+            # if mode is test or val we still need to use the train_df_behaviors for the edges 
+            self.df_behaviors, _, self.article_df, self.behaviors_before_explode = self.ebnerd_from_path(path=root_dir, history_size=history_size, mode=self.mode, data_split=data_split, fraction=fraction, seed=seed, npratio=npratio)
+            self.train_df_behaviors = train_df_behaviors
 
         self.num_users: int
         self.num_articles: int
+        
         self.user_id_to_index = self.compress_user_ids(user_id_to_index=user_id_to_index)
-        if mode != "test":
-            self.article_id_to_index = self.compress_article_ids(article_id_to_index=article_id_to_index)
+        self.article_id_to_index = self.compress_article_ids(article_id_to_index=article_id_to_index)
 
         #assert max(self.df_behaviors[DEFAULT_USER_COL]) + 1 == len(self.df_behaviors[DEFAULT_USER_COL].unique()), "User ids are not continuous"
 
@@ -90,6 +96,7 @@ class EbnerdDataset(Dataset):
         row = self.df_behaviors.row(named=True, index=idx)
 
         # Get the required columns 
+        impression_id = row[DEFAULT_IMPRESSION_ID_COL]
         user_id = row[DEFAULT_USER_COL]
         article_ids_clicked = row[DEFAULT_INVIEW_ARTICLES_COL]
         if self.mode == "test":
@@ -101,7 +108,7 @@ class EbnerdDataset(Dataset):
         else:
             labels = row[DEFAULT_LABELS_COL]
 
-        return user_id, article_ids_clicked, labels
+        return user_id, article_ids_clicked, labels, impression_id
     
     def compress_user_ids(self, user_id_to_index=None) -> dict[int, int]:
 
@@ -130,45 +137,38 @@ class EbnerdDataset(Dataset):
 
     def compress_article_ids(self, article_id_to_index=None, news_user=None) -> dict[int, int]:
         
-        if self.mode == "test":
-            unique_article_ids = news_user.keys()
+        if article_id_to_index is None:
+            unique_article_ids = self.article_df[DEFAULT_ARTICLE_ID_COL].unique().to_numpy()
             article_id_to_index = {user_id: index for index, user_id in enumerate(unique_article_ids)}
             self.num_articles = len(article_id_to_index)
-
-            article_id_to_index[np.nan] = np.nan
-
         else:
+            current_unique_article_ids = self.article_df[DEFAULT_ARTICLE_ID_COL].unique().to_numpy()
+            previous_unique_article_ids = np.array(list(article_id_to_index.keys()))
+            unique_article_ids = np.unique(np.concatenate([current_unique_article_ids, previous_unique_article_ids]))
 
-            if article_id_to_index is None:
-                unique_article_ids = self.article_df[DEFAULT_ARTICLE_ID_COL].unique().to_numpy()
-                article_id_to_index = {user_id: index for index, user_id in enumerate(unique_article_ids)}
-                self.num_articles = len(article_id_to_index)
+            article_id_to_index = {article_id: index for index, article_id in enumerate(unique_article_ids)}
+            self.num_articles = len(article_id_to_index)
+
+        article_id_to_index[np.nan] = np.nan
+
+        def replace_column(name, replace_list):
+            if replace_list:
+                func = lambda article_ids: [article_id_to_index[int(article_id)] for article_id in article_ids]
             else:
-                current_unique_article_ids = self.article_df[DEFAULT_ARTICLE_ID_COL].unique().to_numpy()
-                previous_unique_article_ids = np.array(list(article_id_to_index.keys()))
-                unique_article_ids = np.unique(np.concatenate([current_unique_article_ids, previous_unique_article_ids]))
-
-                article_id_to_index = {article_id: index for index, article_id in enumerate(unique_article_ids)}
-                self.num_articles = len(article_id_to_index)
-
-            article_id_to_index[np.nan] = np.nan
-
-            def replace_column(name, replace_list):
-                if replace_list:
-                    func = lambda article_ids: [article_id_to_index[int(article_id)] for article_id in article_ids]
-                else:
-                    func = lambda article_id: article_id_to_index[int(article_id)]
-                self.df_behaviors = self.df_behaviors.with_columns(
-                    pl.col(name).apply(func).alias(name)
-                )
-
-            replace_column(DEFAULT_ARTICLE_ID_COL, False)
-            replace_column(DEFAULT_CLICKED_ARTICLES_COL, True)
-            replace_column(DEFAULT_INVIEW_ARTICLES_COL, False)
-
-            self.article_df = self.article_df.with_columns(
-                pl.col(DEFAULT_ARTICLE_ID_COL).apply(lambda article_id: article_id_to_index[int(article_id)]).alias(DEFAULT_ARTICLE_ID_COL)
+                func = lambda article_id: article_id_to_index[int(article_id)]
+            self.df_behaviors = self.df_behaviors.with_columns(
+                pl.col(name).apply(func).alias(name)
             )
+
+        replace_column(DEFAULT_ARTICLE_ID_COL, False)
+        if self.mode == "train":
+            replace_column(DEFAULT_CLICKED_ARTICLES_COL, True)
+            #we should only use article clicked if in train mode
+        replace_column(DEFAULT_INVIEW_ARTICLES_COL, False)
+
+        self.article_df = self.article_df.with_columns(
+            pl.col(DEFAULT_ARTICLE_ID_COL).apply(lambda article_id: article_id_to_index[int(article_id)]).alias(DEFAULT_ARTICLE_ID_COL)
+        )
 
         return article_id_to_index
     
@@ -234,46 +234,24 @@ class EbnerdDataset(Dataset):
         ]
     
     def preprocess_neighbors(self):
-        if self.mode == "test":
-            news_user_dict = defaultdict(list)
-            user_news = [[] for _ in range(self.num_users)]
+        news_user = [[] for _ in range(self.num_articles)]
+        user_news = [[] for _ in range(self.num_users)]
 
-            for row in self.df_behaviors.rows(named=True):
-                news_ids = row[DEFAULT_INVIEW_ARTICLES_COL]
-                user_id = row[DEFAULT_USER_COL]
-                read_time = row[DEFAULT_READ_TIME_COL]
-                scroll_percentage = row[DEFAULT_SCROLL_PERCENTAGE_COL]
+        for row in self.train_df_behaviors.rows(named=True):
+            news_ids = row[DEFAULT_CLICKED_ARTICLES_COL]
+            user_id = row[DEFAULT_USER_COL]
+            # so teeeechnically if we have multiple articles in news_ids,
+            # we should give them different scroll percentages and read times
+            # but the train set has at most 2 of those scroll percentages and read times per list,
+            # and the test set has just one, so we'll just use the first one for all articles
+            # (most of them are singular anyway)
+            read_time = row[DEFAULT_READ_TIME_COL]
+            scroll_percentage = row[DEFAULT_SCROLL_PERCENTAGE_COL]
 
-                for news_id in news_ids:
-                    if user_id not in news_user_dict[news_id]:
-                        news_user_dict[news_id].append([user_id, read_time, scroll_percentage])
-                    if news_id not in user_news[user_id]:
-                        user_news[user_id].append([news_id, read_time, scroll_percentage])
-
-            #change news_user to list of lists
-            self.article_id_to_index = self.compress_article_ids(news_user=news_user_dict)
-            news_user = [[] for _ in range(self.num_articles)]
-            for article_id, user_id in news_user_dict.items():
-                news_user[self.article_id_to_index[int(article_id)]] = user_id
-
-        else:
-            news_user = [[] for _ in range(self.num_articles)]
-            user_news = [[] for _ in range(self.num_users)]
-            for row in self.df_behaviors.rows(named=True):
-                news_ids = row[DEFAULT_CLICKED_ARTICLES_COL]
-                user_id = row[DEFAULT_USER_COL]
-                # so teeeechnically if we have multiple articles in news_ids,
-                # we should give them different scroll percentages and read times
-                # but the train set has at most 2 of those scroll percentages and read times per list,
-                # and the test set has just one, so we'll just use the first one for all articles
-                # (most of them are singular anyway)
-                read_time = row[DEFAULT_READ_TIME_COL]
-                scroll_percentage = row[DEFAULT_SCROLL_PERCENTAGE_COL]
-
-                for news_id in news_ids:
-                    if user_id not in news_user[news_id]:
-                        news_user[news_id].append([user_id, read_time, scroll_percentage])
-                    if news_id not in user_news[user_id]:
+            for news_id in news_ids:
+                if user_id not in news_user[news_id]:
+                    news_user[news_id].append([user_id, read_time, scroll_percentage])
+                if news_id not in user_news[user_id]:
                         user_news[user_id].append([news_id, read_time, scroll_percentage])
 
         for list1 in news_user:
@@ -308,6 +286,18 @@ class EbnerdDataset(Dataset):
             return df_behaviors, df_history, df_articles
 
         else:
+            if self.mode == "test":
+                    df_history = (
+                        pl.scan_parquet(path.joinpath("history.parquet"))
+                        .select(DEFAULT_USER_COL, DEFAULT_HISTORY_ARTICLE_ID_COL)
+                        .pipe(
+                            truncate_history,
+                            column=DEFAULT_HISTORY_ARTICLE_ID_COL,
+                            history_size=history_size,
+                            padding_value=0,
+                            enable_warning=False,
+                        )
+                    )
             df_history = (
                 pl.scan_parquet(path.joinpath("history.parquet"))
                 .select(DEFAULT_USER_COL, DEFAULT_HISTORY_ARTICLE_ID_COL)
@@ -350,6 +340,8 @@ class EbnerdDataset(Dataset):
             if mode == "test":
                 df_behaviors = df_behaviors.head(self.first_n_test_rows)
                 df_behaviors = df_behaviors.sample(fraction=fraction)
+            
+            behaviors_before_explode = df_behaviors
 
             #unroll the inview column as rows into the dataframe
             if mode == "train" or mode == "validation":
@@ -366,7 +358,7 @@ class EbnerdDataset(Dataset):
                 pickle.dump((df_behaviors, df_history.collect(), df_articles), f)
 
             print(f'Processing completed successfully')
-            return df_behaviors, df_history, df_articles
+            return df_behaviors, df_history, df_articles, behaviors_before_explode
 
     @classmethod
     def download_and_extract(cls, root_dir: str, data_download_path: str, api_key: str):

@@ -57,7 +57,7 @@ class OriginalModelDatamodule(LightningDataModule):
                                                                    user_id_to_index=self.data_train.user_id_to_index, article_id_to_index=self.data_train.article_id_to_index)
             self.data_test: Optional[EbnerdDataset] = EbnerdDataset(root_dir=self.hparams.root_dir, data_split=self.data_split, mode="test",
                                                                     history_size=self.hparams.history_size, fraction=self.hparams.fraction, npratio=self.hparams.npratio,
-                                                                    user_id_to_index=self.data_train.user_id_to_index, article_id_to_index=self.data_train.article_id_to_index)
+                                                                    user_id_to_index=self.data_val.user_id_to_index, article_id_to_index=self.data_val.article_id_to_index)
 
     def train_dataloader(self) -> DataLoader[Any]:
         """Create and return the train dataloader.
