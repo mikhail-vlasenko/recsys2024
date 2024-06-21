@@ -64,7 +64,7 @@ class Model(nn.Module):
         out_caps = [self.ncaps, self.ncaps - self.dcaps]
         self.routers = [
             RoutingLayer(
-                routing_layers[i], out_caps[i], self.nhidden, self.batch_size, args.dropout_rate, inp_caps[i],
+                routing_layers[i], out_caps[i], self.nhidden, args.dropout_rate, inp_caps[i],
                 edge_feature_dim=self.edge_feature_dim, lora_edge_feats=False
             )
             for i in range(self.n_iter)
@@ -85,6 +85,7 @@ class Model(nn.Module):
         self.ret_linear = nn.Linear(self.nhidden, caps)
 
     def forward(self, user_indices, news_indices, user_news, news_user):
+        self.batch_size = user_indices.shape[0]
         newsvec, uservec, news_edge_feat_vec, user_edge_feat_vec = self.get_neighbors(
             news_indices, user_indices, user_news, news_user)
         news_embeddings, user_embeddings = self.aggregate(newsvec, uservec, news_edge_feat_vec, user_edge_feat_vec)

@@ -57,7 +57,10 @@ from src.ebrec.utils._python import (
 
 
 class EbnerdDataset(Dataset):
-    def __init__(self, root_dir, data_split, mode="train", history_size=30, fraction=1, seed=0, npratio=4, user_id_to_index=None, article_id_to_index=None, train_df_behaviors=None):
+    def __init__(
+            self, root_dir, data_split,
+            mode="train", history_size=30, fraction=1, seed=0, npratio=4, one_row_per_impression=False,
+            user_id_to_index=None, article_id_to_index=None, train_df_behaviors=None):
         """
         User_id_to_index and article_id_to_index are in this constructor because they can be passed to consectutive datasets
         This is useful when we want to use the same mapping for the train, validation and test sets.
@@ -73,14 +76,14 @@ class EbnerdDataset(Dataset):
 
         if train_df_behaviors is None:
             self.df_behaviors: DataFrame
-            self.df_behaviors, _, self.article_df, _ = self.ebnerd_from_path(path=root_dir, history_size=history_size, mode=self.mode, data_split=data_split, fraction=fraction, seed=seed, npratio=npratio)
+            self.df_behaviors, _, self.article_df, _ = self.ebnerd_from_path(path=root_dir, history_size=history_size, mode=self.mode, data_split=data_split, fraction=fraction, seed=seed, npratio=npratio, one_row_per_impression=one_row_per_impression)
         else:
-            # if mode is test or val we still need to use the train_df_behaviors for the edges 
-            self.df_behaviors, _, self.article_df, self.behaviors_before_explode = self.ebnerd_from_path(path=root_dir, history_size=history_size, mode=self.mode, data_split=data_split, fraction=fraction, seed=seed, npratio=npratio)
+            # if mode is test or val we still need to use the train_df_behaviors for the edges
+            self.df_behaviors, _, self.article_df, self.behaviors_before_explode = self.ebnerd_from_path(path=root_dir, history_size=history_size, mode=self.mode, data_split=data_split, fraction=fraction, seed=seed, npratio=npratio, one_row_per_impression=False)
 
         self.num_users: int
         self.num_articles: int
-        
+
         self.user_id_to_index = self.compress_user_ids(user_id_to_index=user_id_to_index)
         self.article_id_to_index = self.compress_article_ids(article_id_to_index=article_id_to_index)
 
@@ -96,12 +99,12 @@ class EbnerdDataset(Dataset):
     
     def __getitem__(self, idx) -> tuple[int, Any, int]:
         row = self.df_behaviors.row(named=True, index=idx)
-        
+
         # Get the required columns 
         user_id = row[DEFAULT_USER_COL]
         article_ids_clicked = row[DEFAULT_INVIEW_ARTICLES_COL]
         if self.mode == "test":
-            labels = 0 #making it none is not allowed 
+            labels = 0 #making it none is not allowed
         else:
             labels = row[DEFAULT_LABELS_COL]
 
@@ -241,7 +244,7 @@ class EbnerdDataset(Dataset):
             # (most of them are singular anyway)
             read_time = row[DEFAULT_READ_TIME_COL]
             scroll_percentage = row[DEFAULT_SCROLL_PERCENTAGE_COL]
-            
+
 
             for news_id in news_ids:
                 #print(news_id)
@@ -259,7 +262,10 @@ class EbnerdDataset(Dataset):
 
         return user_news, news_user
 
-    def ebnerd_from_path(self, path: Path, mode: str, data_split, seed, npratio, history_size: int = 30, fraction = 1) -> tuple[pl.DataFrame, pl.LazyFrame, pl.DataFrame]:
+    def ebnerd_from_path(
+            self, path: Path, mode: str, data_split, seed, npratio,
+            history_size: int = 30, fraction=1, one_row_per_impression=False
+    ) -> tuple[pl.DataFrame, pl.LazyFrame, pl.DataFrame]:
         """
         Load ebnerd - function
         # I could add something here to select columns but I dont think its necessary for now, makes more sense to do in the loader overwrite
@@ -276,6 +282,7 @@ class EbnerdDataset(Dataset):
         data_pkl_path = Path('data') / f'{mode}_seed_{seed}.pkl'
 
         if os.path.exists(data_pkl_path):
+            print(f"\nLoading data from {data_pkl_path}\n")
             with open(data_pkl_path, 'rb') as f:
                 (df_behaviors, df_history, df_articles, df_before_explode) = pickle.load(f)
 
@@ -314,14 +321,14 @@ class EbnerdDataset(Dataset):
                 df_behaviors = (df_behaviors
                     .pipe(
                         sampling_strategy_wu2019,
-                        npratio=npratio,
-                        shuffle=True,
-                        with_replacement=True,
-                        seed=123,
-                    )
-                    .pipe(create_binary_labels_column)
-                    .sample(fraction=fraction)
+                    npratio=npratio,
+                    shuffle=True,
+                    with_replacement=True,
+                    seed=123,
                 )
+                                .pipe(create_binary_labels_column)
+                                .sample(fraction=fraction)
+                                )
             if mode == "validation":
                 df_behaviors = (df_behaviors
                     .pipe(create_binary_labels_column)
@@ -330,8 +337,14 @@ class EbnerdDataset(Dataset):
             if mode == "test":
                 df_behaviors = df_behaviors.head(self.first_n_test_rows)
                 #df_behaviors = df_behaviors.sample(fraction=fraction)
-            
+
             behaviors_before_explode = df_behaviors
+
+            print(f"Loaded {len(df_behaviors)} rows")
+            if one_row_per_impression:
+                # keep only one row per impression id
+                df_behaviors = df_behaviors.unique(subset=DEFAULT_IMPRESSION_ID_COL, keep="first")
+                print(f"Kept one row per impression id, now {len(df_behaviors)} rows")
 
             print(f'Exploding inview and labels columns...')
             if mode == "test":
@@ -343,7 +356,7 @@ class EbnerdDataset(Dataset):
             if mode == "train" or mode == "validation":
                 print(f"Percentage of positive labels in {mode} data: {df_behaviors.filter(pl.col('labels') == 1).height / df_behaviors.height}")
 
-            #also load article data 
+            #also load article data
             df_articles = pl.read_parquet(article_path)
 
             #pickle the data

@@ -1,0 +1,13 @@
+numpy~=1.26.0
+torch~=2.3.0
+requests~=2.31.0
+polars~=0.20.31
+tqdm~=4.66.2
+transformers~=4.38.2
+lightning~=2.3.0
+PyYAML~=6.0.1
+tensorflow~=2.16.1
+scikit-learn~=1.4.1.post1
+torchmetrics~=1.4.0
+scipy~=1.11.3
+wandb~=0.17.0
