@@ -6,6 +6,7 @@ from src.utils.get_training_args import get_training_args
 from src.utils.print_mean_std import print_mean_std
 from src.data.original_model_datamodule import OriginalModelDatamodule
 from src.data.ebnerd_variants import EbnerdVariants
+from src.ebrec.evaluation import MetricEvaluator, AucScore, NdcgScore, MrrScore
 
 import wandb
 import torch
@@ -113,8 +114,15 @@ def train_and_test(data_download_path: str, args):
         prediction_scores=test_df["ranked_scores"],
     )
     # trainer.fit(module, datamodule)
-    metrics = None #compute metrics from the submission file
+    metrics = MetricEvaluator(
+        labels=test_df["labels"].to_list(),
+        predictions=test_df["scores"].to_list(),
+        metric_functions=[AucScore(), MrrScore(), NdcgScore(k=5), NdcgScore(k=10)],
+    )
+
+    metrics = metrics.evaluate().evaluations
     wandb_logger.log(metrics)
+
     return metrics
 
 def main():
