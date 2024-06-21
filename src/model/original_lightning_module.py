@@ -121,7 +121,7 @@ class OriginalModule(LightningModule):
             for i, article_id in enumerate(article_index):
                 user_embeddings, news_embeddings = self.net(user_id, article_id, user_news, news_user)
                 user_projected, news_projected = self.net.apply_projection(user_embeddings, news_embeddings)
-                score, _ = self.compute_scores(user_projected, news_projected, user_id, article_id, labels=None, mode=mode)
+                score, _ = self.compute_scores(user_projected, news_projected, user_id, article_id, labels, mode=mode)
                 article_score[i] = score
             labels = (article_score > 0.5).astype(int)
         

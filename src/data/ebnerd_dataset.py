@@ -2,14 +2,13 @@ import requests
 import zipfile
 from pathlib import Path
 import logging
-from typing import Optional
+from typing import Optional, Union, Any
 from collections import defaultdict
 
 from polars import DataFrame
 from tqdm import tqdm
 
 import torch
-from typing import Union
 from torch import Tensor
 from torch.utils.data import Dataset
 
@@ -92,19 +91,20 @@ class EbnerdDataset(Dataset):
     def __len__(self):
         return len(self.df_behaviors)
     
-    def __getitem__(self, idx) -> tuple[int, int, int]:
+    def __getitem__(self, idx) -> tuple[int, Any, int]:
         row = self.df_behaviors.row(named=True, index=idx)
-
         # Get the required columns 
         impression_id = row[DEFAULT_IMPRESSION_ID_COL]
         user_id = row[DEFAULT_USER_COL]
         article_ids_clicked = row[DEFAULT_INVIEW_ARTICLES_COL]
         if self.mode == "test":
             #pad lists so batches don't contain varying lengths
-            #confusingly this is a list in the test set and a singleton id in train/val sets
-            article_ids_clicked = [lst + [-1] * (self.max_inview_articles_at_test_time - len(lst))
-                                   for lst in article_ids_clicked]
-            labels = None
+            #confusingly this is a list in the test set and an int in train/val sets
+            print(article_ids_clicked)
+            article_ids_clicked = np.array(article_ids_clicked + [-1] * (self.max_inview_articles_at_test_time - len(article_ids_clicked)))
+            article_ids_clicked = np.expand_dims(article_ids_clicked, axis=0)
+            labels = np.empty_like(article_ids_clicked)
+            labels = np.expand_dims(labels, axis=0)
         else:
             labels = row[DEFAULT_LABELS_COL]
 
