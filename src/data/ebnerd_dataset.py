@@ -153,6 +153,7 @@ class EbnerdDataset(Dataset):
             if replace_list:
                 func = lambda article_ids: [article_id_to_index[int(article_id)] for article_id in article_ids]
             else:
+                print(article_id_to_index)
                 func = lambda article_id: article_id_to_index[int(article_id)]
             self.df_behaviors = self.df_behaviors.with_columns(
                 pl.col(name).apply(func).alias(name)
