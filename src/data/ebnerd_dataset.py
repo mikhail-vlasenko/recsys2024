@@ -344,7 +344,10 @@ class EbnerdDataset(Dataset):
             behaviors_before_explode = df_behaviors
 
             print(f'Exploding inview and labels columns...')
-            df_behaviors = df_behaviors.explode('article_ids_inview','labels')
+            if mode == "test":
+                df_behaviors = df_behaviors.explode('article_ids_inview')
+            else:
+                df_behaviors = df_behaviors.explode('article_ids_inview','labels')
 
             #print the percentage of positive versus negative labels in the val and train datasets
             if mode == "train" or mode == "validation":
