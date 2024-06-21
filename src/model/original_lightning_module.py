@@ -225,18 +225,14 @@ class OriginalModule(LightningModule):
     ) -> torch.Tensor:
         loss, scores, labels = self.loss_from_batch(batch, mode = "val", ret_scores=True) #TODO change mode to val
         print("percentagepositiveval", torch.sum(labels).item()/len(labels))
-        self.metrics.labels += [labels.cpu().detach().numpy()]
-        self.metrics.predictions += [scores.cpu().detach().numpy()]
-        metric_dict = self.metrics.evaluate().evaluations #gives a rolling computation of the metrics
+        #self.metrics.labels += [labels.cpu().detach().numpy()]
+        #self.metrics.predictions += [scores.cpu().detach().numpy()]
+        #metric_dict = self.metrics.evaluate().evaluations #gives a rolling computation of the metrics
 
         self.log("val/loss", loss, on_epoch=True, prog_bar=True, logger=True)
-        self.log("val/ndcg@10", metric_dict['ndcg@10'], on_epoch=True, prog_bar=True, logger=True)
-        self.log("val/auc", metric_dict['auc'], on_epoch=True, prog_bar=True, logger=True)
-        self.log("val/mrr", metric_dict['mrr'], on_epoch=True, prog_bar=False, logger=True)
-        self.log("val/ndcg@5", metric_dict['ndcg@5'], on_epoch=True, prog_bar=False, logger=True)
         #also log the beyond accuracy metrics to the logger
         
-        return loss, metric_dict['ndcg@10'], metric_dict['auc']
+        return loss
     
     def on_test_start(self) -> None:
         """Lightning hook that is called when test begins.
