@@ -101,7 +101,7 @@ class EbnerdDataset(Dataset):
         user_id = row[DEFAULT_USER_COL]
         article_ids_clicked = row[DEFAULT_INVIEW_ARTICLES_COL]
         if self.mode == "test":
-            labels = None
+            labels = 0 #making it none is not allowed 
         else:
             labels = row[DEFAULT_LABELS_COL]
         print(user_id, article_ids_clicked, labels)
