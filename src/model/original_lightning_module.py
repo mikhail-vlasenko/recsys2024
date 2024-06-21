@@ -25,6 +25,8 @@ class OriginalModule(LightningModule):
         val_article_features: Tuple[torch.Tensor, torch.Tensor, torch.Tensor],
         test_article_features: Tuple[torch.Tensor, torch.Tensor, torch.Tensor],
         n_users: int,
+        test_df_behaviors,
+        val_df_behaviors,
         args 
     ) -> None:
         
@@ -33,6 +35,12 @@ class OriginalModule(LightningModule):
         # this line allows to access init params with 'self.hparams' attribute
         # also ensures init params will be stored in ckpt
         self.save_hyperparameters(logger=False)
+
+        # store the dataframes to which we will append the predictions
+        self.test_df_behaviors = test_df_behaviors
+        self.val_df_behaviors = val_df_behaviors
+
+        # store the edges
         self.train_news_user = train_news_user
         self.train_user_news = train_user_news
         self.val_news_user = val_news_user
@@ -114,16 +122,6 @@ class OriginalModule(LightningModule):
 
         user_news, news_user = torch.tensor(user_news, dtype=torch.float32).to(self.device), torch.tensor(
                 news_user, dtype=torch.float32).to(self.device)
-
-        if mode == "test":
-            article_index = article_index[article_index >= 0]
-            article_score = np.zeros_like(article_index)
-            for i, article_id in enumerate(article_index):
-                user_embeddings, news_embeddings = self.net(user_id, article_id, user_news, news_user)
-                user_projected, news_projected = self.net.apply_projection(user_embeddings, news_embeddings)
-                score, _ = self.compute_scores(user_projected, news_projected, user_id, article_id, labels, mode=mode)
-                article_score[i] = score
-            labels = (article_score > 0.5).astype(int)
         
         return user_id, article_index, user_news, news_user, labels
 
@@ -255,18 +253,18 @@ class OriginalModule(LightningModule):
         
         loss, scores, labels = self.loss_from_batch(batch, mode="test", ret_scores=True)
         
-        self.metrics.labels += [labels.detach().numpy()]
-        self.metrics.predictions += [scores.detach().numpy()]
-        metric_dict = self.metrics.evaluate().evaluations #gives a rolling computation of the metrics
+        #self.metrics.labels += [labels.detach().numpy()]
+        #self.metrics.predictions += [scores.detach().numpy()]
+        #metric_dict = self.metrics.evaluate().evaluations #gives a rolling computation of the metrics
 
-        self.log("test/loss", loss, on_epoch=True, prog_bar=True, logger=True)
-        self.log("test/f1", metric_dict['ndcg@10'], on_epoch=True, prog_bar=True, logger=True)
-        self.log("test/auc", metric_dict['auc'], on_epoch=True, prog_bar=True, logger=True)
-        self.log("test/mrr", metric_dict['mrr'], on_epoch=True, prog_bar=False, logger=True)
-        self.log("test/ndcg@5", metric_dict['ndcg@5'], on_epoch=True, prog_bar=False, logger=True)
+        #self.log("test/loss", loss, on_epoch=True, prog_bar=True, logger=True)
+        #self.log("test/f1", metric_dict['ndcg@10'], on_epoch=True, prog_bar=True, logger=True)
+        #self.log("test/auc", metric_dict['auc'], on_epoch=True, prog_bar=True, logger=True)
+        #self.log("test/mrr", metric_dict['mrr'], on_epoch=True, prog_bar=False, logger=True)
+        #self.log("test/ndcg@5", metric_dict['ndcg@5'], on_epoch=True, prog_bar=False, logger=True)
         #also log the beyond accuracy metrics to the logger
         
-        return loss, metric_dict['ndcg@10'], metric_dict['auc']
+        return loss #,metric_dict['ndcg@10'], metric_dict['auc']
 
     def configure_optimizers(self) -> Dict[str, Any]:
         optimizer = torch.optim.Adam(
