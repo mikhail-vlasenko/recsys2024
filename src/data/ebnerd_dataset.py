@@ -294,6 +294,17 @@ class EbnerdDataset(Dataset):
                     pl.scan_parquet(path.joinpath("history.parquet"))
                     .select(DEFAULT_USER_COL, DEFAULT_HISTORY_ARTICLE_ID_COL)
                 )
+                df_behaviors = (
+                    pl.scan_parquet(path.joinpath("behaviors.parquet"))
+                    .collect()
+                    .select(DEFAULT_USER_COL, DEFAULT_INVIEW_ARTICLES_COL, DEFAULT_READ_TIME_COL, DEFAULT_SCROLL_PERCENTAGE_COL, DEFAULT_ARTICLE_ID_COL, DEFAULT_CLICKED_ARTICLES_COL)
+                    .pipe(
+                        slice_join_dataframes,
+                        df2=df_history.collect(),
+                        on=DEFAULT_USER_COL,
+                        how="left",
+                    )
+                )
             else:
                 df_history = (
                     pl.scan_parquet(path.joinpath("history.parquet"))
@@ -306,16 +317,19 @@ class EbnerdDataset(Dataset):
                         enable_warning=False,
                     )
                 )
-            df_behaviors = (
-                pl.scan_parquet(path.joinpath("behaviors.parquet"))
-                .collect()
-                .pipe(
-                    slice_join_dataframes,
-                    df2=df_history.collect(),
-                    on=DEFAULT_USER_COL,
-                    how="left",
+
+                df_behaviors = (
+                    pl.scan_parquet(path.joinpath("behaviors.parquet"))
+                    .collect()
+                    .select(DEFAULT_USER_COL, DEFAULT_INVIEW_ARTICLES_COL, DEFAULT_READ_TIME_COL, DEFAULT_SCROLL_PERCENTAGE_COL, DEFAULT_ARTICLE_ID_COL, DEFAULT_CLICKED_ARTICLES_COL, DEFAULT_LABELS_COL)
+                    .pipe(
+                        slice_join_dataframes,
+                        df2=df_history.collect(),
+                        on=DEFAULT_USER_COL,
+                        how="left",
+                    )
                 )
-            )
+            
 
             if mode == "train":
                 df_behaviors = (df_behaviors
