@@ -74,17 +74,20 @@ class EbnerdDataset(Dataset):
         if train_df_behaviors is None:
             self.df_behaviors: DataFrame
             self.df_behaviors, _, self.article_df, _ = self.ebnerd_from_path(path=root_dir, history_size=history_size, mode=self.mode, data_split=data_split, fraction=fraction, seed=seed, npratio=npratio)
-            self.train_df_behaviors = self.df_behaviors
         else:
             # if mode is test or val we still need to use the train_df_behaviors for the edges 
             self.df_behaviors, _, self.article_df, self.behaviors_before_explode = self.ebnerd_from_path(path=root_dir, history_size=history_size, mode=self.mode, data_split=data_split, fraction=fraction, seed=seed, npratio=npratio)
-            self.train_df_behaviors = train_df_behaviors
 
         self.num_users: int
         self.num_articles: int
         
         self.user_id_to_index = self.compress_user_ids(user_id_to_index=user_id_to_index)
         self.article_id_to_index = self.compress_article_ids(article_id_to_index=article_id_to_index)
+
+        if self.mode == "train":
+            self.train_df_behaviors = self.df_behaviors
+        else:
+            self.train_df_behaviors = train_df_behaviors
 
         #assert max(self.df_behaviors[DEFAULT_USER_COL]) + 1 == len(self.df_behaviors[DEFAULT_USER_COL].unique()), "User ids are not continuous"
 
