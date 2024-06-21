@@ -282,7 +282,7 @@ class EbnerdDataset(Dataset):
 
         data_pkl_path = Path('data') / f'{mode}_seed_{seed}.pkl'
 
-        if False:# os.path.exists(data_pkl_path):
+        if os.path.exists(data_pkl_path):
             with open(data_pkl_path, 'rb') as f:
                 (df_behaviors, df_history, df_articles, df_before_explode) = pickle.load(f)
 
