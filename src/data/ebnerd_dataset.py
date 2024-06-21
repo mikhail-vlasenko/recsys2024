@@ -101,13 +101,7 @@ class EbnerdDataset(Dataset):
         user_id = row[DEFAULT_USER_COL]
         article_ids_clicked = row[DEFAULT_INVIEW_ARTICLES_COL]
         if self.mode == "test":
-            #pad lists so batches don't contain varying lengths
-            #confusingly this is a list in the test set and an int in train/val sets
-            print(article_ids_clicked)
-            article_ids_clicked = np.array(article_ids_clicked + [-1] * (self.max_inview_articles_at_test_time - len(article_ids_clicked)))
-            article_ids_clicked = np.expand_dims(article_ids_clicked, axis=0)
-            labels = np.empty_like(article_ids_clicked)
-            labels = np.expand_dims(labels, axis=0)
+            labels = None
         else:
             labels = row[DEFAULT_LABELS_COL]
 
@@ -251,11 +245,9 @@ class EbnerdDataset(Dataset):
             # (most of them are singular anyway)
             read_time = row[DEFAULT_READ_TIME_COL]
             scroll_percentage = row[DEFAULT_SCROLL_PERCENTAGE_COL]
-            print(len(news_user))
             
 
             for news_id in news_ids:
-                print(news_id)
                 if user_id not in news_user[news_id]:
                     news_user[news_id].append([user_id, read_time, scroll_percentage])
                 if news_id not in user_news[user_id]:
@@ -350,10 +342,8 @@ class EbnerdDataset(Dataset):
             
             behaviors_before_explode = df_behaviors
 
-            #unroll the inview column as rows into the dataframe
-            if mode == "train" or mode == "validation":
-                print(f'Exploding inview and labels columns...')
-                df_behaviors = df_behaviors.explode('article_ids_inview','labels')
+            print(f'Exploding inview and labels columns...')
+            df_behaviors = df_behaviors.explode('article_ids_inview','labels')
 
             #print the percentage of positive versus negative labels in the val and train datasets
             if mode == "train" or mode == "validation":
