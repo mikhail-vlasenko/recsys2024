@@ -96,8 +96,8 @@ class EbnerdDataset(Dataset):
     
     def __getitem__(self, idx) -> tuple[int, Any, int]:
         row = self.df_behaviors.row(named=True, index=idx)
+        
         # Get the required columns 
-        impression_id = row[DEFAULT_IMPRESSION_ID_COL]
         user_id = row[DEFAULT_USER_COL]
         article_ids_clicked = row[DEFAULT_INVIEW_ARTICLES_COL]
         if self.mode == "test":
@@ -111,7 +111,7 @@ class EbnerdDataset(Dataset):
         else:
             labels = row[DEFAULT_LABELS_COL]
 
-        return user_id, article_ids_clicked, labels, impression_id
+        return user_id, article_ids_clicked, labels
     
     def compress_user_ids(self, user_id_to_index=None) -> dict[int, int]:
 
