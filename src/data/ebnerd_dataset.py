@@ -159,11 +159,13 @@ class EbnerdDataset(Dataset):
             self.df_behaviors = self.df_behaviors.with_columns(
                 pl.col(name).apply(func).alias(name)
             )
-        if self.mode == "train":
+        if self.mode == "train" or self.mode == "validation":
             replace_column(DEFAULT_ARTICLE_ID_COL, False)
             replace_column(DEFAULT_CLICKED_ARTICLES_COL, True)
             #we should only use article clicked if in train mode
-        replace_column(DEFAULT_INVIEW_ARTICLES_COL, False)
+            replace_column(DEFAULT_INVIEW_ARTICLES_COL, False)
+        if self.mode == "test":
+            replace_column(DEFAULT_INVIEW_ARTICLES_COL, True)
 
         self.article_df = self.article_df.with_columns(
             pl.col(DEFAULT_ARTICLE_ID_COL).apply(lambda article_id: article_id_to_index[int(article_id)]).alias(DEFAULT_ARTICLE_ID_COL)
@@ -338,7 +340,7 @@ class EbnerdDataset(Dataset):
                 )
             if mode == "test":
                 df_behaviors = df_behaviors.head(self.first_n_test_rows)
-                df_behaviors = df_behaviors.sample(fraction=fraction)
+                #df_behaviors = df_behaviors.sample(fraction=fraction)
             
             behaviors_before_explode = df_behaviors
 
