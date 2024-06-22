@@ -101,6 +101,10 @@ def train_and_test(data_download_path: str, args):
     }
 
     trainer = L.Trainer(**trainer_args)
+    trainer.fit(module, datamodule)
+    #load the best model
+    module = OriginalModule.load_from_checkpoint(checkpoint_callback.best_model_path)
+    
     trainer.test(module, datamodule)
 
     test_df: pl.DataFrame = datamodule.data_test.behaviors_before_explode
