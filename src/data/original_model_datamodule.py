@@ -19,6 +19,8 @@ class OriginalModelDatamodule(LightningDataModule):
         fraction: float = 1.0,
         npratio: int = 4,
         one_row_per_impression: bool = False,
+        use_labeled_test_set: bool = False,
+        labeled_test_set_split: float = 0.5
     ) -> None:
         super().__init__()
     
@@ -61,23 +63,45 @@ class OriginalModelDatamodule(LightningDataModule):
             self.data_train: Optional[EbnerdDataset] = EbnerdDataset(
                 mode="train", one_row_per_impression=self.hparams.one_row_per_impression, **dataset_params
             )
-            self.data_val: Optional[EbnerdDataset] = EbnerdDataset(
-                mode="validation",
-                user_id_to_index=self.data_train.user_id_to_index,
-                article_id_to_index=self.data_train.article_id_to_index,
-                train_df_behaviors=self.data_train.df_behaviors,
-                one_row_per_impression=self.hparams.one_row_per_impression,
-                **dataset_params
-            )
-            # one_row_per_impression should probably always be false for test
-            self.data_test: Optional[EbnerdDataset] = EbnerdDataset(
-                mode="test",
-                user_id_to_index=self.data_val.user_id_to_index,
-                article_id_to_index=self.data_val.article_id_to_index,
-                train_df_behaviors=self.data_train.df_behaviors,
-                one_row_per_impression=False,
-                **dataset_params
-            )
+            if self.hparams.use_labeled_test_set:
+                self.data_val: Optional[EbnerdDataset] = EbnerdDataset(
+                    mode="validation",
+                    user_id_to_index=self.data_train.user_id_to_index,
+                    article_id_to_index=self.data_train.article_id_to_index,
+                    train_df_behaviors=self.data_train.df_behaviors,
+                    one_row_per_impression=self.hparams.one_row_per_impression,
+                    data_slice=[0,self.hparams.labeled_test_set_split],
+                    **dataset_params
+                )
+                # one_row_per_impression should probably always be false for test
+                self.data_test: Optional[EbnerdDataset] = EbnerdDataset(
+                    mode="validation",
+                    user_id_to_index=self.data_val.user_id_to_index,
+                    article_id_to_index=self.data_val.article_id_to_index,
+                    train_df_behaviors=self.data_train.df_behaviors,
+                    one_row_per_impression=False,
+                    data_slice=[self.hparams.labeled_test_set_split,1],
+                    **dataset_params
+                )
+
+            else:
+                self.data_val: Optional[EbnerdDataset] = EbnerdDataset(
+                    mode="validation",
+                    user_id_to_index=self.data_train.user_id_to_index,
+                    article_id_to_index=self.data_train.article_id_to_index,
+                    train_df_behaviors=self.data_train.df_behaviors,
+                    one_row_per_impression=self.hparams.one_row_per_impression,
+                    **dataset_params
+                )
+                # one_row_per_impression should probably always be false for test
+                self.data_test: Optional[EbnerdDataset] = EbnerdDataset(
+                    mode="test",
+                    user_id_to_index=self.data_val.user_id_to_index,
+                    article_id_to_index=self.data_val.article_id_to_index,
+                    train_df_behaviors=self.data_train.df_behaviors,
+                    one_row_per_impression=False,
+                    **dataset_params
+                )
 
     def train_dataloader(self) -> DataLoader[Any]:
         """Create and return the train dataloader.

@@ -60,7 +60,7 @@ class EbnerdDataset(Dataset):
     def __init__(
             self, root_dir, data_split,
             mode="train", history_size=30, fraction=1, seed=0, npratio=4, one_row_per_impression=False,
-            user_id_to_index=None, article_id_to_index=None, train_df_behaviors=None):
+            user_id_to_index=None, article_id_to_index=None, train_df_behaviors=None, data_slice=None):
         """
         User_id_to_index and article_id_to_index are in this constructor because they can be passed to consectutive datasets
         This is useful when we want to use the same mapping for the train, validation and test sets.
@@ -79,7 +79,7 @@ class EbnerdDataset(Dataset):
             self.df_behaviors, _, self.article_df, _ = self.ebnerd_from_path(path=root_dir, history_size=history_size, mode=self.mode, data_split=data_split, fraction=fraction, seed=seed, npratio=npratio, one_row_per_impression=one_row_per_impression)
         else:
             # if mode is test or val we still need to use the train_df_behaviors for the edges
-            self.df_behaviors, _, self.article_df, self.behaviors_before_explode = self.ebnerd_from_path(path=root_dir, history_size=history_size, mode=self.mode, data_split=data_split, fraction=fraction, seed=seed, npratio=npratio, one_row_per_impression=False)
+            self.df_behaviors, _, self.article_df, self.behaviors_before_explode = self.ebnerd_from_path(path=root_dir, history_size=history_size, mode=self.mode, data_split=data_split, fraction=fraction, seed=seed, npratio=npratio, one_row_per_impression=False, data_slice=data_slice)
 
         self.num_users: int
         self.num_articles: int
@@ -264,7 +264,7 @@ class EbnerdDataset(Dataset):
 
     def ebnerd_from_path(
             self, path: Path, mode: str, data_split, seed, npratio,
-            history_size: int = 30, fraction=1, one_row_per_impression=False
+            history_size: int = 30, fraction=1, one_row_per_impression=False, data_slice=None
     ):
         """
         Load ebnerd - function
@@ -279,9 +279,16 @@ class EbnerdDataset(Dataset):
             article_path = Path(path) / data_split / "articles.parquet"
             path = Path(path) / data_split / mode
 
-        data_pkl_path = Path('data') / f'{mode}_seed_{seed}.pkl'
+        data_pkl_path = Path('data') / f'{mode}_seed_{seed}'
 
-        if False: #os.path.exists(data_pkl_path):
+        if data_slice is not None:
+            start, end = data_slice
+            print(f"Using data slice {start} to {end}")
+            data_pkl_path = data_pkl_path / f"slice_{start}_{end}"
+
+        data_pkl_path = data_pkl_path / '.pkl'
+
+        if os.path.exists(data_pkl_path):
             print(f"\nLoading data from {data_pkl_path}\n")
             with open(data_pkl_path, 'rb') as f:
                 (df_behaviors, df_history, df_articles, df_before_explode) = pickle.load(f)
@@ -349,9 +356,14 @@ class EbnerdDataset(Dataset):
                     .sample(fraction=fraction)
                 )
             if mode == "test":
-                
-                df_behaviors = df_behaviors.head(5000000)
+                df_behaviors = df_behaviors.head(1000000)
                 #df_behaviors = df_behaviors.sample(fraction=fraction)
+
+            if data_slice is not None:
+                start, end = data_slice
+                start_index = int(start * len(df_behaviors))
+                length = int((end - start) * len(df_behaviors))
+                df_behaviors = df_behaviors.slice(start_index, length) 
 
             behaviors_before_explode = df_behaviors
 
