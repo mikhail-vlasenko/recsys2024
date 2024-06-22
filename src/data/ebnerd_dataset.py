@@ -284,6 +284,8 @@ class EbnerdDataset(Dataset):
         if data_slice is not None:
             start, end = data_slice
             print(f"Using data slice {start} to {end}")
+            start = (100*start)
+            end = (100*end)
             data_pkl_path = data_pkl_path.with_name(f"{data_pkl_path.name}_slice_{start}_{end}")
 
         data_pkl_path = data_pkl_path.with_suffix('.pkl')
