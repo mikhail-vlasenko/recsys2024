@@ -21,7 +21,6 @@ srun python -m src.new_main \
   --batch_size 512 \
   --use_labeled_test_set \
   --labeled_test_set_split 0.5 \
-  --more_labels \
   --num_runs 3 \
   --n_epochs 1
 
