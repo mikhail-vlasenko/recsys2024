@@ -198,7 +198,7 @@ class OriginalModule(LightningModule):
         """
 
         loss, scores, labels = self.loss_from_batch(batch, mode="train", ret_scores=True)
-        print("percentagepositive", torch.sum(labels).item()/len(labels))
+        #print("percentagepositive", torch.sum(labels).item()/len(labels))
 
         self.metrics.labels += [labels.cpu().detach().numpy()]
         self.metrics.predictions += [scores.cpu().detach().numpy()]
@@ -224,7 +224,7 @@ class OriginalModule(LightningModule):
         self, batch: Tuple[torch.Tensor, torch.Tensor], batch_idx: int
     ) -> torch.Tensor:
         loss, scores, labels = self.loss_from_batch(batch, mode = "val", ret_scores=True) #TODO change mode to val
-        print("percentagepositiveval", torch.sum(labels).item()/len(labels))
+        #print("percentagepositiveval", torch.sum(labels).item()/len(labels))
         #self.metrics.labels += [labels.cpu().detach().numpy()]
         #self.metrics.predictions += [scores.cpu().detach().numpy()]
         #metric_dict = self.metrics.evaluate().evaluations #gives a rolling computation of the metrics
