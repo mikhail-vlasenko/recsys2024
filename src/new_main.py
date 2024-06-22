@@ -113,15 +113,18 @@ def train_and_test(data_download_path: str, args):
         impression_ids=test_df[DEFAULT_IMPRESSION_ID_COL],
         prediction_scores=test_df["ranked_scores"],
     )
-    # trainer.fit(module, datamodule)
-    metrics = MetricEvaluator(
-        labels=test_df["labels"].to_list(),
-        predictions=test_df["scores"].to_list(),
-        metric_functions=[AucScore(), MrrScore(), NdcgScore(k=5), NdcgScore(k=10)],
-    )
+    metrics = None
+    if args.use_labeled_test_set:
 
-    metrics = metrics.evaluate().evaluations
-    wandb_logger.log(metrics)
+        # trainer.fit(module, datamodule)
+        metrics = MetricEvaluator(
+            labels=test_df["labels"].to_list(),
+            predictions=test_df["scores"].to_list(),
+            metric_functions=[AucScore(), MrrScore(), NdcgScore(k=5), NdcgScore(k=10)],
+        )
+
+        metrics = metrics.evaluate().evaluations
+        wandb_logger.log(metrics)
 
     return metrics
 
@@ -139,7 +142,8 @@ def main():
         metrics = train_and_test(data_download_path=data_download_path, args=args)
         metrics_list.append(metrics)
 
-    print_mean_std(metrics_list)
+    if args.use_labeled_test_set:
+        print_mean_std(metrics_list)
 
    
 
