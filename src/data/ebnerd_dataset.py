@@ -304,7 +304,7 @@ class EbnerdDataset(Dataset):
                 df_behaviors = (
                     pl.scan_parquet(path.joinpath("behaviors.parquet"))
                     .collect()
-                    .select(DEFAULT_USER_COL, DEFAULT_INVIEW_ARTICLES_COL, DEFAULT_READ_TIME_COL, DEFAULT_SCROLL_PERCENTAGE_COL)
+                    .select(DEFAULT_USER_COL, DEFAULT_INVIEW_ARTICLES_COL, DEFAULT_READ_TIME_COL, DEFAULT_SCROLL_PERCENTAGE_COL,DEFAULT_IMPRESSION_ID_COL)
                     .pipe(
                         slice_join_dataframes,
                         df2=df_history.collect(),
@@ -328,7 +328,7 @@ class EbnerdDataset(Dataset):
                 df_behaviors = (
                     pl.scan_parquet(path.joinpath("behaviors.parquet"))
                     .collect()
-                    .select(DEFAULT_USER_COL, DEFAULT_INVIEW_ARTICLES_COL, DEFAULT_READ_TIME_COL, DEFAULT_SCROLL_PERCENTAGE_COL, DEFAULT_ARTICLE_ID_COL, DEFAULT_CLICKED_ARTICLES_COL)
+                    .select(DEFAULT_USER_COL, DEFAULT_INVIEW_ARTICLES_COL, DEFAULT_READ_TIME_COL, DEFAULT_SCROLL_PERCENTAGE_COL, DEFAULT_ARTICLE_ID_COL, DEFAULT_CLICKED_ARTICLES_COL,DEFAULT_IMPRESSION_ID_COL)
                     .pipe(
                         slice_join_dataframes,
                         df2=df_history.collect(),
