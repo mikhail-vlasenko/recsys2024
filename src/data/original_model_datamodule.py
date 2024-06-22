@@ -66,6 +66,8 @@ class OriginalModelDatamodule(LightningDataModule):
                 mode="train", one_row_per_impression=self.hparams.one_row_per_impression, **dataset_params
             )
             if self.hparams.use_labeled_test_set:
+                print('using labeled test set')
+                print(self.hparams.labeled_test_set_split)
                 self.data_val: Optional[EbnerdDataset] = EbnerdDataset(
                     mode="validation",
                     user_id_to_index=self.data_train.user_id_to_index,
