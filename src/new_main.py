@@ -109,7 +109,7 @@ def train_and_test(data_download_path: str, args):
     
     trainer.test(module, datamodule)
 
-    test_df: pl.DataFrame = datamodule.data_test.behaviors_before_explode.collect()# if type(datamodule.data_test.behaviors_before_explode) == pl.LazyFrame else datamodule.data_test.behaviors_before_explode
+    test_df: pl.DataFrame = datamodule.data_test.behaviors_before_explode #if type(datamodule.data_test.behaviors_before_explode) == pl.LazyFrame else datamodule.data_test.behaviors_before_explode
     scores = np.array(module.test_predictions)[..., np.newaxis]
     test_df = add_prediction_scores(test_df, scores.tolist())
     test_df = test_df.with_columns(
