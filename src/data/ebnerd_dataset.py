@@ -286,7 +286,7 @@ class EbnerdDataset(Dataset):
             print(f"Using data slice {start} to {end}")
             data_pkl_path = data_pkl_path / f"slice_{start}_{end}"
 
-        data_pkl_path = data_pkl_path / '.pkl'
+        data_pkl_path = data_pkl_path.with_suffix('.pkl')
 
         if os.path.exists(data_pkl_path):
             print(f"\nLoading data from {data_pkl_path}\n")
