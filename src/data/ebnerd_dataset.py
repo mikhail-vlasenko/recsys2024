@@ -345,7 +345,7 @@ class EbnerdDataset(Dataset):
                     npratio=npratio,
                     shuffle=True,
                     with_replacement=True,
-                    seed=123,
+                    seed=seed,
                 )
                                 .pipe(create_binary_labels_column)
                                 .sample(fraction=fraction)

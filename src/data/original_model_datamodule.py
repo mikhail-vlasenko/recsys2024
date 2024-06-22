@@ -19,6 +19,7 @@ class OriginalModelDatamodule(LightningDataModule):
         fraction: float = 1.0,
         npratio: int = 4,
         one_row_per_impression: bool = False,
+        seed: int = 42,
         use_labeled_test_set: bool = False,
         labeled_test_set_split: float = 0.5
     ) -> None:
@@ -59,6 +60,7 @@ class OriginalModelDatamodule(LightningDataModule):
                 "history_size": self.hparams.history_size,
                 "fraction": self.hparams.fraction,
                 "npratio": self.hparams.npratio,
+                "seed": self.hparams.seed,
             }
             self.data_train: Optional[EbnerdDataset] = EbnerdDataset(
                 mode="train", one_row_per_impression=self.hparams.one_row_per_impression, **dataset_params
