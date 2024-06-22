@@ -96,6 +96,8 @@ def train_and_test(data_download_path: str, args):
         "accelerator": device_name,
         "devices": "auto",
         'max_epochs': args.n_epochs,
+        "limit_train_batches": 10,
+        "limit_val_batches": 2,
     }
 
     trainer = L.Trainer(**trainer_args)
@@ -144,9 +146,6 @@ def main():
 
     if args.use_labeled_test_set:
         print_mean_std(metrics_list)
-
-   
-
 
 if __name__ == "__main__":
     main()
