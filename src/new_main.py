@@ -135,6 +135,7 @@ def main():
     for i in range(args.num_runs):
         seed = args.seeds[i]
         args.seed = seed
+        L.seed_everything(seed)
         metrics = train_and_test(data_download_path=data_download_path, args=args)
         metrics_list.append(metrics)
 
