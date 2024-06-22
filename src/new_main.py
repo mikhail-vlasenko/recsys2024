@@ -132,8 +132,7 @@ def train_and_test(data_download_path: str, args):
         )
 
         metrics = metrics.evaluate().evaluations
-        wandb_logger.log(metrics)
-
+        print(metrics)
     return metrics
 
 def main():
