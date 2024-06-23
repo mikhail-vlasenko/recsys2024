@@ -139,6 +139,7 @@ def train_and_test(data_download_path: str, args):
     else:
         trainer.fit(module, datamodule)
         #load the best model
+        print(checkpoint_callback.best_model_path)
         module = OriginalModule.load_from_checkpoint(checkpoint_callback.best_model_path, net=net)
 
     trainer.test(module, datamodule)
