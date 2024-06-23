@@ -211,7 +211,8 @@ def main():
             print('so it breaks here right')
             run = wandb.init(entity="inverse_rl", project="RecSys")
             print('does it even init the run?')
-            current_checkpoint = run.use_artifact(args.checkpoint, type="model")
+            current_checkpoint = run.use_artifact(args.checkpoint)
+            print('does it even get the artifact?')
             checkpoint = current_checkpoint.download()
             #module = OriginalModule.load_from_checkpoint(checkpoint, net=net)
         else:
