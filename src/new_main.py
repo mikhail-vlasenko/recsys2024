@@ -7,6 +7,7 @@ from src.utils.print_mean_std import print_mean_std
 from src.data.original_model_datamodule import OriginalModelDatamodule
 from src.data.ebnerd_variants import EbnerdVariants
 from src.ebrec.evaluation import MetricEvaluator, AucScore, NdcgScore, MrrScore
+from pathlib import Path
 
 import wandb
 import torch
