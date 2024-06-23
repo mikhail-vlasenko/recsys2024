@@ -204,7 +204,7 @@ def main():
         if args.checkpoint_list is not None:
             args.checkpoint = args.checkpoint_list[i]
             print('so it breaks here right')
-            run = wandb.api.run("inverse_rl/RecSys/<run_id>")
+            run = wandb.Api().run("inverse_rl/RecSys/<run_id>")
             print('does it even init the run?')
             current_checkpoint = run.use_artifact(args.checkpoint, type="model")
             checkpoint = current_checkpoint.download()
