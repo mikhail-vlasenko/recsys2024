@@ -125,7 +125,7 @@ def train_and_test(data_download_path: str, args):
         "accelerator": device_name,
         "devices": "auto",
         'max_epochs': args.n_epochs,
-        'limit_train_batches': 1,
+        'limit_train_batches': 5,
         'limit_val_batches': 1,
     }
 
