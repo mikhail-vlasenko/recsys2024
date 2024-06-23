@@ -62,6 +62,7 @@ def get_training_args():
     parser.add_argument('--one_row_impression', action='store_true', default=False)
     parser.add_argument('--use_labeled_test_set', action='store_true', default=False)
     parser.add_argument('--labeled_test_set_split', type=float, default=0.5, help='The fraction we take of the labeled val set to make a test set')
+    parser.add_argument('--checkpoint_list', type=str, default=None, help='list of wandbcheckpoints')
     
     show_loss = True
     show_time = False

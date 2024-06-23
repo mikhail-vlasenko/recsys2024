@@ -101,10 +101,17 @@ def train_and_test(data_download_path: str, args):
     }
 
     trainer = L.Trainer(**trainer_args)
-    trainer.fit(module, datamodule)
-    #load the best model
-    module = OriginalModule.load_from_checkpoint(checkpoint_callback.best_model_path, net=net)
-    
+
+    if args.checkpoint is not None:
+        run = wandb.init()
+        current_checkpoint = run.use_artifact(args.checkpoint, type="model")
+        checkpoint = current_checkpoint.download() + "/model.ckpt"
+        module = OriginalModule.load_from_checkpoint(checkpoint, net=net)
+    else:
+        trainer.fit(module, datamodule)
+        #load the best model
+        module = OriginalModule.load_from_checkpoint(checkpoint_callback.best_model_path, net=net)
+
     trainer.test(module, datamodule)
 
     test_df: pl.DataFrame = datamodule.data_test.behaviors_before_explode #if type(datamodule.data_test.behaviors_before_explode) == pl.LazyFrame else datamodule.data_test.behaviors_before_explode
@@ -141,9 +148,13 @@ def main():
     data_download_path = EbnerdVariants.init_variant(args.ebnerd_variant).value.path
     metrics_list = []
     for i in range(args.num_runs):
+        #set seed 
         seed = args.seeds[i]
         args.seed = seed
         L.seed_everything(seed)
+        if args.checkpoint_list is not None:
+            args.checkpoint = args.checkpoint_list[i]
+
         metrics = train_and_test(data_download_path=data_download_path, args=args)
         metrics_list.append(metrics)
 
