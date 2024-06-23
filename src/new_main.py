@@ -206,6 +206,8 @@ def main():
             current_checkpoint = run.use_artifact(args.checkpoint, type="model")
             checkpoint = current_checkpoint.download()
             #module = OriginalModule.load_from_checkpoint(checkpoint, net=net)
+        else:
+            args.checkpoint = None
 
         metrics, known_metrics = train_and_test(data_download_path=data_download_path, args=args)
         metrics_list.append(metrics)
