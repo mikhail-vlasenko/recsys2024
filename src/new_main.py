@@ -188,6 +188,8 @@ def train_and_test(data_download_path: str, args):
             prediction_scores=test_df["ranked_scores"],
         )
 
+    wandb.finish()
+
     return metrics, None
 
 def main():
