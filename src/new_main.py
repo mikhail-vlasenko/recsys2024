@@ -191,7 +191,12 @@ def train_and_test(data_download_path: str, args):
 def main():
     args = get_training_args()
     
-    wandb.login()
+    try:
+        wandb.login()
+    except:
+        with open("src/utils/api_key.txt") as f:
+            wandb_api_key = f.read().strip()
+            wandb.login(key=wandb_api_key)
 
     data_download_path = EbnerdVariants.init_variant(args.ebnerd_variant).value.path
     metrics_list = []
