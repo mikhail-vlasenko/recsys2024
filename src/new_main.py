@@ -1,7 +1,7 @@
 import numpy as np
 
-from src.ebrec.utils._behaviors import add_prediction_scores
-from src.ebrec.utils._constants import DEFAULT_IMPRESSION_ID_COL
+from src.ebrec.utils._behaviors import add_prediction_scores, add_known_user_column
+from src.ebrec.utils._constants import DEFAULT_IMPRESSION_ID_COL, DEFAULT_USER_COL
 from src.utils.get_training_args import get_training_args
 from src.utils.print_mean_std import print_mean_std
 from src.data.original_model_datamodule import OriginalModelDatamodule
@@ -25,6 +25,32 @@ from transformers import BertTokenizer, BertModel
 
 device_name = "cuda" if torch.cuda.is_available() else "cpu"
 device = torch.device(device_name)
+
+def split_dataframe(df: pl.DataFrame, known_user_col: str = DEFAULT_USER_COL):
+    """
+    Splits the DataFrame into two: one with only known users and one with both known and unknown users.
+    Args:
+        df: A Polars DataFrame object with a column indicating known users.
+        known_user_col: The name of the column indicating known users.
+    Returns:
+        A tuple of two DataFrames (known_users_df, all_users_df).
+    """
+    known_users_df = df.filter(pl.col(known_user_col) == True)
+    all_users_df = df  # Since all_users_df is the same as the input df
+    return known_users_df, all_users_df
+
+def count_users(df: pl.DataFrame, known_user_col: str = DEFAULT_USER_COL):
+    """
+    Counts the number of known and unknown users in the DataFrame.
+    Args:
+        df: A Polars DataFrame object with a column indicating known users.
+        known_user_col: The name of the column indicating known users.
+    Returns:
+        A tuple of two integers (num_known_users, num_unknown_users).
+    """
+    num_known_users = df.filter(pl.col(known_user_col) == True).height
+    num_unknown_users = df.filter(pl.col(known_user_col) == False).height
+    return num_known_users, num_unknown_users
 
 def train_and_test(data_download_path: str, args):
     datamodule = OriginalModelDatamodule(
@@ -116,18 +142,19 @@ def train_and_test(data_download_path: str, args):
 
     test_df: pl.DataFrame = datamodule.data_test.behaviors_before_explode #if type(datamodule.data_test.behaviors_before_explode) == pl.LazyFrame else datamodule.data_test.behaviors_before_explode
     scores = np.array(module.test_predictions)[..., np.newaxis]
-    test_df = add_prediction_scores(test_df, scores.tolist())
-    test_df = test_df.with_columns(
-        pl.col("scores")
-        .map_elements(lambda x: list(rank_predictions_by_score(x)))
-        .alias("ranked_scores")
+    test_df = add_prediction_scores(test_df, scores.tolist()).pipe(
+        add_known_user_column, known_users=datamodule.data_train.df_behaviors[DEFAULT_USER_COL]
     )
-    write_submission_file(
-        impression_ids=test_df[DEFAULT_IMPRESSION_ID_COL],
-        prediction_scores=test_df["ranked_scores"],
-    )
+
     metrics = None
     if args.use_labeled_test_set:
+        test_df_known, test_df = split_dataframe(test_df)
+
+        metrics_known = MetricEvaluator(
+            labels=test_df_known["labels"].to_list(),
+            predictions=test_df_known["scores"].to_list(),
+            metric_functions=[AucScore(), MrrScore(), NdcgScore(k=5), NdcgScore(k=10)],
+        )
 
         # trainer.fit(module, datamodule)
         metrics = MetricEvaluator(
@@ -137,7 +164,21 @@ def train_and_test(data_download_path: str, args):
         )
 
         metrics = metrics.evaluate().evaluations
-        print(metrics)
+        metrics_known = metrics_known.evaluate().evaluations
+        print('metrics for all users', metrics)
+        print('metrics for only known users', metrics_known)
+
+    else:
+        test_df = test_df.with_columns(
+            pl.col("scores")
+            .map_elements(lambda x: list(rank_predictions_by_score(x)))
+            .alias("ranked_scores")
+        )
+        write_submission_file(
+            impression_ids=test_df[DEFAULT_IMPRESSION_ID_COL],
+            prediction_scores=test_df["ranked_scores"],
+        )
+
     return metrics
 
 def main():
