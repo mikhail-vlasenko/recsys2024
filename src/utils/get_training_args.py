@@ -71,6 +71,6 @@ def get_training_args():
 
     args = parser.parse_args()
     if args.api_key is None:
-        with open("api_key.txt") as f:
+        with open("utils/api_key.txt") as f:
             args.api_key = f.read().strip()
     return args
