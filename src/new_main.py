@@ -131,9 +131,9 @@ def train_and_test(data_download_path: str, args):
     trainer = L.Trainer(**trainer_args)
 
     if args.checkpoint is not None:
-        run = wandb.init(project="inverse_rl", entity="RecSys")
+        run = wandb.init(entity="inverse_rl", project="RecSys")
         current_checkpoint = run.use_artifact(args.checkpoint, type="model")
-        checkpoint = current_checkpoint.download()
+        checkpoint = current_checkpoint.download() / "model.ckpt"
         module = OriginalModule.load_from_checkpoint(checkpoint, net=net)
     else:
         trainer.fit(module, datamodule)
@@ -208,13 +208,6 @@ def main():
         L.seed_everything(seed)
         if args.checkpoint_list is not None:
             args.checkpoint = args.checkpoint_list[i]
-            print('so it breaks here right', args.checkpoint)
-            run = wandb.init(entity="inverse_rl", project="RecSys")
-            print('does it even init the run?')
-            current_checkpoint = run.use_artifact(args.checkpoint)
-            print('does it even get the artifact?')
-            checkpoint = current_checkpoint.download()
-            #module = OriginalModule.load_from_checkpoint(checkpoint, net=net)
         else:
             args.checkpoint = None
 
