@@ -208,7 +208,7 @@ def main():
         L.seed_everything(seed)
         if args.checkpoint_list is not None:
             args.checkpoint = args.checkpoint_list[i]
-            print('so it breaks here right')
+            print('so it breaks here right', args.checkpointS)
             run = wandb.init(entity="inverse_rl", project="RecSys")
             print('does it even init the run?')
             current_checkpoint = run.use_artifact(args.checkpoint)
