@@ -129,7 +129,7 @@ def train_and_test(data_download_path: str, args):
     trainer = L.Trainer(**trainer_args)
 
     if args.checkpoint is not None:
-        run = wandb.init()
+        run = wandb.init(project="inverse_rl", entity="RecSys")
         current_checkpoint = run.use_artifact(args.checkpoint, type="model")
         checkpoint = current_checkpoint.download()
         module = OriginalModule.load_from_checkpoint(checkpoint, net=net)
