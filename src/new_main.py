@@ -151,6 +151,9 @@ def train_and_test(data_download_path: str, args):
     metrics = None
     if args.use_labeled_test_set:
         test_df_known, test_df = split_dataframe(test_df)
+        num_known_users, num_unknown_users = count_users(test_df)
+        print('count of known users', num_known_users)
+        print('count of unknown users', num_unknown_users)
 
         metrics_known = MetricEvaluator(
             labels=test_df_known["labels"].to_list(),
