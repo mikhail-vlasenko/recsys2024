@@ -198,6 +198,11 @@ def main():
         L.seed_everything(seed)
         if args.checkpoint_list is not None:
             args.checkpoint = args.checkpoint_list[i]
+            run = wandb.init(project="inverse_rl", entity="RecSys")
+            print('does it even init the run?')
+            current_checkpoint = run.use_artifact(args.checkpoint, type="model")
+            checkpoint = current_checkpoint.download()
+            #module = OriginalModule.load_from_checkpoint(checkpoint, net=net)
 
         metrics, known_metrics = train_and_test(data_download_path=data_download_path, args=args)
         metrics_list.append(metrics)
