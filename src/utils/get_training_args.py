@@ -4,6 +4,9 @@ from src.data.ebnerd_variants import EbnerdVariants
 def get_training_args():
     parser = argparse.ArgumentParser()
 
+    def list_of_strings(arg):
+        return arg.split(',')
+
     parser.add_argument(
         "--ebnerd_variant",
         type=str,
@@ -62,7 +65,7 @@ def get_training_args():
     parser.add_argument('--one_row_impression', action='store_true', default=False)
     parser.add_argument('--use_labeled_test_set', action='store_true', default=False)
     parser.add_argument('--labeled_test_set_split', type=float, default=0.5, help='The fraction we take of the labeled val set to make a test set')
-    parser.add_argument('--checkpoint_list', type=list, nargs='+', default=None, help='list of wandbcheckpoints')
+    parser.add_argument('--checkpoint_list', type=list, type=list_of_strings, default=None, help='list of wandbcheckpoints')
     
     show_loss = True
     show_time = False
