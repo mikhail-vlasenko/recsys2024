@@ -168,6 +168,8 @@ def train_and_test(data_download_path: str, args):
         print('metrics for all users', metrics)
         print('metrics for only known users', metrics_known)
 
+        metrics = metrics, metrics_known
+
     else:
         test_df = test_df.with_columns(
             pl.col("scores")
@@ -179,7 +181,7 @@ def train_and_test(data_download_path: str, args):
             prediction_scores=test_df["ranked_scores"],
         )
 
-    return metrics
+    return metrics, None
 
 def main():
     args = get_training_args()
@@ -188,6 +190,7 @@ def main():
 
     data_download_path = EbnerdVariants.init_variant(args.ebnerd_variant).value.path
     metrics_list = []
+    known_metrics_list = []
     for i in range(args.num_runs):
         #set seed 
         seed = args.seeds[i]
@@ -196,11 +199,13 @@ def main():
         if args.checkpoint_list is not None:
             args.checkpoint = args.checkpoint_list[i]
 
-        metrics = train_and_test(data_download_path=data_download_path, args=args)
+        metrics, known_metrics = train_and_test(data_download_path=data_download_path, args=args)
         metrics_list.append(metrics)
+        known_metrics_list.append(known_metrics)
 
     if args.use_labeled_test_set:
         print_mean_std(metrics_list)
+        print_mean_std(known_metrics_list)
 
 if __name__ == "__main__":
     main()
