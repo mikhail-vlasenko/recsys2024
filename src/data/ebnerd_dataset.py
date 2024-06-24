@@ -148,7 +148,7 @@ class EbnerdDataset(Dataset):
 
         article_id_to_index[np.nan] = np.nan
 
-        def replace_column(name, replace_list, df_behaviors):
+        def replace_column(name, replace_list):
             if replace_list:
                 func = lambda article_ids: [article_id_to_index[int(article_id)] for article_id in article_ids]
             else:
@@ -157,12 +157,12 @@ class EbnerdDataset(Dataset):
                 pl.col(name).apply(func).alias(name)
             )
         if self.mode == "train" or self.mode == "validation":
-            replace_column(DEFAULT_ARTICLE_ID_COL, False, df_behaviors)
-            replace_column(DEFAULT_CLICKED_ARTICLES_COL, True, df_behaviors)
+            replace_column(DEFAULT_ARTICLE_ID_COL, False )
+            replace_column(DEFAULT_CLICKED_ARTICLES_COL, True)
             #we should only use article clicked if in train mode
-            replace_column(DEFAULT_INVIEW_ARTICLES_COL, False, df_behaviors)
+            replace_column(DEFAULT_INVIEW_ARTICLES_COL, False)
         if self.mode == "test":
-            replace_column(DEFAULT_INVIEW_ARTICLES_COL, False, df_behaviors)
+            replace_column(DEFAULT_INVIEW_ARTICLES_COL, False)
 
         self.article_df = self.article_df.with_columns(
             pl.col(DEFAULT_ARTICLE_ID_COL).apply(lambda article_id: article_id_to_index[int(article_id)]).alias(DEFAULT_ARTICLE_ID_COL)
