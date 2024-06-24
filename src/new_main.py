@@ -161,7 +161,7 @@ def train_and_test(data_download_path: str, args):
         # For other columns, take the first value (assuming they are identical within groups)
         #agg_exploded_cols = [pl.col(col) for col in exploded_cols]
         agg_other_cols = [pl.first(col).alias(col) for col in other_cols]
-        df_reverted = df.groupby(id_col).agg([pl.col('article_ids_inview'), pl.col('labels')] + agg_other_cols)# + agg_other_cols)
+        df_reverted = df.groupby(id_col).agg(agg_other_cols ,article_ids_inview = pl.col('article_ids_inview'), labels = pl.col('labels'))# + agg_other_cols)
 
         return df_reverted
     
