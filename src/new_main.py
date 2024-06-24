@@ -151,16 +151,20 @@ def train_and_test(data_download_path: str, args):
 
     def revert_explosion(df, id_col, exploded_cols):
         # Identify columns that are not exploded
-        other_cols = [col for col in df.columns if col not in exploded_cols]
+        
+        all_exploded_cols = exploded_cols + [id_col]
+    
+        other_cols = [col for col in df.columns if col not in all_exploded_cols]
 
         # Group by the identifier column
         # For exploded columns, aggregate into lists
         # For other columns, take the first value (assuming they are identical within groups)
-        agg_exploded_cols = [pl.col(col).alias(col) for col in exploded_cols]
-        agg_other_cols = [pl.col(col).first().alias(col) for col in other_cols]
-        df_reverted = df.groupby(id_col).agg(agg_exploded_cols + agg_other_cols)
+        #agg_exploded_cols = [pl.col(col) for col in exploded_cols]
+        agg_other_cols = [pl.first(col).alias(col) for col in other_cols]
+        df_reverted = df.groupby(id_col).agg([pl.col('article_ids_inview'), pl.col('labels')] + agg_other_cols)# + agg_other_cols)
 
         return df_reverted
+    
 
     test_df: pl.DataFrame = revert_explosion(datamodule.data_test.df_behaviors, DEFAULT_IMPRESSION_ID_COL, ['article_ids_inview', 'labels']) #if type(datamodule.data_test.behaviors_before_explode) == pl.LazyFrame else datamodule.data_test.behaviors_before_explod
     scores = np.array(module.test_predictions)[..., np.newaxis]
