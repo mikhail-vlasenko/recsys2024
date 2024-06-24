@@ -102,7 +102,7 @@ def train_and_test(data_download_path: str, args):
     checkpoint_filename = f"{args.ebnerd_variant}-original-model"
     checkpoint_callback = ModelCheckpoint(
         dirpath="checkpoints/",
-        filename=checkpoint_filename + "-{epoch}-{val_loss:.2f}",
+        filename=checkpoint_filename + "-{epoch}-{val/loss:.2f}",
         monitor="val/loss",
         mode="min"
     )
