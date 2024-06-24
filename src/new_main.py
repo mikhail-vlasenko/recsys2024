@@ -24,6 +24,7 @@ from src.model.original_lightning_module import OriginalModule
 from src.model.components.model import Model
 from transformers import BertTokenizer, BertModel
 from copy import copy 
+import os
 
 device_name = "cuda" if torch.cuda.is_available() else "cpu"
 device = torch.device(device_name)
@@ -133,7 +134,7 @@ def train_and_test(data_download_path: str, args):
     if args.checkpoint is not None:
         run = wandb.init(entity="inverse_rl", project="RecSys")
         current_checkpoint = run.use_artifact(args.checkpoint, type='model')
-        checkpoint = Path(current_checkpoint.download()) / "model.ckpt"
+        checkpoint = os.listdir(current_checkpoint.download())[0]
         module = OriginalModule.load_from_checkpoint(checkpoint, net=net)
     else:
         trainer.fit(module, datamodule)
