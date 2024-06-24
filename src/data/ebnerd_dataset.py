@@ -195,7 +195,7 @@ class EbnerdDataset(Dataset):
         title_word_ids = encoding['input_ids']
 
         #encode the named entities
-        entities_list = self.article_df[DEFAULT_ENTITIES_COL].to_list()
+        entities_list = self.article_df[DEFAULT_NER_COL].to_list()
         placeholder = ['[UNK]']  
         prepared_entities = [ent if ent else placeholder for ent in entities_list]
         # print(prepared_entities)
