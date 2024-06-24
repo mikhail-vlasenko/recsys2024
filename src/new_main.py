@@ -144,7 +144,7 @@ def train_and_test(data_download_path: str, args):
         wandb.log_artifact(artifact)
         #print(checkpoint_callback.best_model_path)
         #previous_module = copy.deepcopy(module)
-        #module = OriginalModule.load_from_checkpoint(checkpoint_callback.best_model_path, net=net)
+        module = OriginalModule.load_from_checkpoint(checkpoint_callback.best_model_path, net=net)
         #test_sum = torch.sum(module.user_embedding - previous_module.user_embedding)
 
     trainer.test(module, datamodule)
