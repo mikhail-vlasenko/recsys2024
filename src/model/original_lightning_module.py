@@ -229,7 +229,7 @@ class OriginalModule(LightningModule):
         #self.metrics.predictions += [scores.cpu().detach().numpy()]
         #metric_dict = self.metrics.evaluate().evaluations #gives a rolling computation of the metrics
 
-        self.log("val/loss", loss, on_epoch=True, prog_bar=True, logger=True)
+        self.log("val_loss", loss, on_epoch=True, prog_bar=True, logger=True)
         #also log the beyond accuracy metrics to the logger
         
         return loss
