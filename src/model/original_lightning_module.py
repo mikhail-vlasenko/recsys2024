@@ -4,9 +4,9 @@ import numpy as np
 import torch
 import torch.nn.functional as F
 from lightning import LightningModule
-from torchmetrics import MinMetric, MeanMetric, classification
-from src.model.components.model import Model
+from src.model.components.model import Model 
 from src.data.data_loader import random_neighbor, optimized_random_neighbor
+from src.ebrec.evaluation.metrics_protocols import MetricEvaluator, AucScore, MrrScore, NdcgScore
 import logging
 from tqdm import tqdm
 
@@ -19,9 +19,14 @@ class OriginalModule(LightningModule):
         train_news_user: list[list[float]],
         val_user_news: list[list[int]],
         val_news_user: list[list[int]],
+        test_user_news: list[list[int]],
+        test_news_user: list[list[int]],
         train_article_features: Tuple[torch.Tensor, torch.Tensor, torch.Tensor],
         val_article_features: Tuple[torch.Tensor, torch.Tensor, torch.Tensor],
+        test_article_features: Tuple[torch.Tensor, torch.Tensor, torch.Tensor],
         n_users: int,
+        test_df_behaviors,
+        val_df_behaviors,
         args 
     ) -> None:
         
@@ -30,16 +35,26 @@ class OriginalModule(LightningModule):
         # this line allows to access init params with 'self.hparams' attribute
         # also ensures init params will be stored in ckpt
         self.save_hyperparameters(logger=False)
+
+        # store the dataframes to which we will append the predictions
+        self.test_df_behaviors = test_df_behaviors
+        self.val_df_behaviors = val_df_behaviors
+
+        # store the edges
         self.train_news_user = train_news_user
         self.train_user_news = train_user_news
         self.val_news_user = val_news_user
         self.val_user_news = val_user_news
+        self.test_news_user = test_news_user
+        self.test_user_news = test_user_news
 
         #set up article features
         self.train_news_title, self.train_news_entity, self.train_news_group = train_article_features
         self.val_news_title, self.val_news_entity, self.val_news_group = val_article_features
+        self.test_news_title, self.test_news_entity, self.test_news_group = test_article_features
         self.train_news_title, self.train_news_entity, self.train_news_group = self.train_news_title.to(self.device), self.train_news_entity.to(self.device), self.train_news_group.to(self.device)
         self.val_news_title, self.val_news_entity, self.val_news_group = self.val_news_title.to(self.device), self.val_news_entity.to(self.device), self.val_news_group.to(self.device)
+        self.test_news_title, self.test_news_entity, self.test_news_group = self.test_news_title.to(self.device), self.test_news_entity.to(self.device), self.test_news_group.to(self.device)
 
         self.net = net
 
@@ -50,10 +65,10 @@ class OriginalModule(LightningModule):
             print("args.optimized_subsampling:", args.optimized_subsampling)
             self.train_user_news, self.train_news_user = self.pre_load_neighbors(train_user_news, train_news_user)
             self.val_user_news, self.val_news_user = self.pre_load_neighbors(val_user_news, val_news_user)
+            self.test_user_news, self.test_news_user = self.pre_load_neighbors(test_user_news, test_news_user)
 
 
-        self.f1 = classification.BinaryF1Score()
-        self.auc = classification.BinaryAUROC()
+        self.metrics = MetricEvaluator(labels=[], predictions=[], metric_functions=[AucScore(), MrrScore(), NdcgScore(k=5), NdcgScore(k=10)])
 
         self.more_labels = args.more_labels
 
@@ -67,6 +82,8 @@ class OriginalModule(LightningModule):
         for i in range(len(val_user_news)):
             self.val_user_edge_index.append(set(np.array(val_user_news[i])[:, 0]))
 
+        self.test_predictions = []
+        
         #TODO add test set
 
     def pre_load_neighbors(self, user_news, news_user):
@@ -99,7 +116,7 @@ class OriginalModule(LightningModule):
         elif mode == "val":
             user_news, news_user = self.val_user_news, self.val_news_user
         elif mode == "test":
-            assert False, "Test mode not implemented"
+            user_news, news_user = self.test_user_news, self.test_news_user
 
         if self.hparams.args.optimized_subsampling:
             user_news, news_user = optimized_random_neighbor(self.hparams.args, user_news, news_user, self.user_lengths, self.news_lengths)
@@ -121,7 +138,7 @@ class OriginalModule(LightningModule):
         return loss
 
     def compute_scores(self, user_projected, news_projected, user_indices, news_indices, labels, mode):
-        if self.more_labels:
+        if self.more_labels and mode != "test" and mode != "val":
             if mode == "train":
                 user_edge_index = self.train_user_edge_index
             elif mode == "val":
@@ -165,6 +182,7 @@ class OriginalModule(LightningModule):
         We need to set the model to training mode here. -> swap out the article features to the train ones
         """
         self.net.train()
+        self.metrics = MetricEvaluator(labels=[], predictions=[], metric_functions=[AucScore(), MrrScore(), NdcgScore(k=5), NdcgScore(k=10)])
         train_news_title, train_news_entity, train_news_group = self.train_news_title.to(self.device), self.train_news_entity.to(self.device), self.train_news_group.to(self.device)
         self.net.set_article_features(train_news_title, train_news_entity, train_news_group)
 
@@ -179,9 +197,17 @@ class OriginalModule(LightningModule):
         :return: A tensor of losses between model predictions and targets.
         """
 
-        loss = self.loss_from_batch(batch, mode="train")
+        loss, scores, labels = self.loss_from_batch(batch, mode="train", ret_scores=True)
+        #print("percentagepositive", torch.sum(labels).item()/len(labels))
+
+        self.metrics.labels += [labels.cpu().detach().numpy()]
+        self.metrics.predictions += [scores.cpu().detach().numpy()]
+        #metric_dict = self.metrics.evaluate().evaluations
 
         self.log("train/loss", loss, on_step=True, on_epoch=True, prog_bar=True, logger=True)
+        #self.log("train/ndcg@10", metric_dict['ndcg@10'], on_epoch=True, prog_bar=True, logger=True)
+        #self.log("train/auc", metric_dict['auc'], on_epoch=True, prog_bar=True, logger=True)
+
         return loss
 
     def on_validation_start(self) -> None:
@@ -189,25 +215,34 @@ class OriginalModule(LightningModule):
         We need to set the model to evaluation mode here. -> swap out the article features to the val ones
         """
         self.net.eval()
+        self.metrics = MetricEvaluator(labels=[], predictions=[], metric_functions=[AucScore(), MrrScore(), NdcgScore(k=5), NdcgScore(k=10)])
+
         val_news_title, val_news_entity, val_news_group = self.val_news_title.to(self.device), self.val_news_entity.to(self.device), self.val_news_group.to(self.device)
         self.net.set_article_features(val_news_title, val_news_entity, val_news_group)
-
 
     def validation_step(
         self, batch: Tuple[torch.Tensor, torch.Tensor], batch_idx: int
     ) -> torch.Tensor:
         loss, scores, labels = self.loss_from_batch(batch, mode = "val", ret_scores=True) #TODO change mode to val
-
-        f1 = self.f1(scores, labels)
-        roc_auc = self.auc(scores, labels)
+        #print("percentagepositiveval", torch.sum(labels).item()/len(labels))
+        #self.metrics.labels += [labels.cpu().detach().numpy()]
+        #self.metrics.predictions += [scores.cpu().detach().numpy()]
+        #metric_dict = self.metrics.evaluate().evaluations #gives a rolling computation of the metrics
 
         self.log("val/loss", loss, on_epoch=True, prog_bar=True, logger=True)
-        self.log("val/f1", f1, on_epoch=True, prog_bar=True, logger=True)
-        self.log("val/roc_auc", roc_auc, on_epoch=True, prog_bar=True, logger=True)
+        #also log the beyond accuracy metrics to the logger
+        
+        return loss
+    
+    def on_test_start(self) -> None:
+        """Lightning hook that is called when test begins.
+        We need to set the model to evaluation mode here. -> swap out the article features to the test ones
+        """
+        self.net.eval()
+        self.metrics = MetricEvaluator(labels=[], predictions=[], metric_functions=[AucScore(), MrrScore(), NdcgScore(k=5), NdcgScore(k=10)])
 
-        return loss, f1, roc_auc
-
-    # TODO implement on_test_start
+        test_news_title, test_news_entity, test_news_group = self.test_news_title.to(self.device), self.test_news_entity.to(self.device), self.test_news_group.to(self.device)
+        self.net.set_article_features(test_news_title, test_news_entity, test_news_group)
 
     def test_step(
         self, batch: Tuple[torch.Tensor, torch.Tensor], batch_idx: int
@@ -215,14 +250,20 @@ class OriginalModule(LightningModule):
         
         loss, scores, labels = self.loss_from_batch(batch, mode="test", ret_scores=True)
 
-        f1 = self.f1(scores, labels)
-        roc_auc = self.auc(scores, labels)
+        self.test_predictions.extend(list(scores.cpu().detach().numpy()))
+        
+        #self.metrics.labels += [labels.detach().numpy()]
+        #self.metrics.predictions += [scores.detach().numpy()]
+        #metric_dict = self.metrics.evaluate().evaluations #gives a rolling computation of the metrics
 
-        self.log("test/loss", loss, on_epoch=True, prog_bar=True, logger=True)
-        self.log("test/f1", f1, on_epoch=True, prog_bar=True, logger=True)
-        self.log("test/roc_auc", roc_auc, on_epoch=True, prog_bar=True, logger=True)
-
-        return loss, f1, roc_auc
+        #self.log("test/loss", loss, on_epoch=True, prog_bar=True, logger=True)
+        #self.log("test/f1", metric_dict['ndcg@10'], on_epoch=True, prog_bar=True, logger=True)
+        #self.log("test/auc", metric_dict['auc'], on_epoch=True, prog_bar=True, logger=True)
+        #self.log("test/mrr", metric_dict['mrr'], on_epoch=True, prog_bar=False, logger=True)
+        #self.log("test/ndcg@5", metric_dict['ndcg@5'], on_epoch=True, prog_bar=False, logger=True)
+        #also log the beyond accuracy metrics to the logger
+        
+        return loss #,metric_dict['ndcg@10'], metric_dict['auc']
 
     def configure_optimizers(self) -> Dict[str, Any]:
         optimizer = torch.optim.Adam(

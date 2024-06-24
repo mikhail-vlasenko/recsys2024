@@ -2,7 +2,7 @@
 
 #SBATCH --partition=gpu
 #SBATCH --gpus=1
-#SBATCH --job-name=baseline-config
+#SBATCH --job-name=edge_labels
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=18
 #SBATCH --time=24:00:00
@@ -21,7 +21,6 @@ srun python -m src.new_main \
   --batch_size 512 \
   --use_labeled_test_set \
   --labeled_test_set_split 0.5 \
-  --more_labels \
   --num_runs 3 \
   --n_epochs 1
 

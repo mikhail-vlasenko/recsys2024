@@ -4,6 +4,9 @@ from src.data.ebnerd_variants import EbnerdVariants
 def get_training_args():
     parser = argparse.ArgumentParser()
 
+    def list_of_strings(arg):
+        return arg.split(',')
+
     parser.add_argument(
         "--ebnerd_variant",
         type=str,
@@ -48,7 +51,10 @@ def get_training_args():
     parser.add_argument('--version', type=int, default=0,
                             help='Different version under the same set')
     parser.add_argument('--dropout_rate', type=float, default=0.3, help='dropout rate')
-    parser.add_argument('--seed', type=int, default=0, help='random seed')
+    parser.add_argument(
+        "--seeds", nargs="+", type=int, default=[0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
+    )
+    parser.add_argument('--num_runs', type=int, default=3, help='number of runs')
     parser.add_argument('--optimized_subsampling', action='store_true')
     parser.set_defaults(optimized_subsampling=False)
 
@@ -57,14 +63,16 @@ def get_training_args():
     parser.add_argument('--fraction', type=float, default=1.0, help='fraction of data to use for the behaviors df, number applies to both train, test and val')
     parser.add_argument('--npratio', type=int, default=4, help='The ratio of negative article ids to positive article ids in train and val data')
     parser.add_argument('--one_row_impression', action='store_true', default=False)
+    parser.add_argument('--use_labeled_test_set', action='store_true', default=False)
+    parser.add_argument('--labeled_test_set_split', type=float, default=0.5, help='The fraction we take of the labeled val set to make a test set')
+    parser.add_argument('--checkpoint_list', type=list_of_strings, default=None, help='list of wandbcheckpoints')
     
     show_loss = True
     show_time = False
 
     #t = time()
-
     args = parser.parse_args()
     if args.api_key is None:
-        with open("api_key.txt") as f:
+        with open("src/utils/api_key.txt") as f:
             args.api_key = f.read().strip()
     return args

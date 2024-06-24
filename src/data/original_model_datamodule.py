@@ -19,6 +19,9 @@ class OriginalModelDatamodule(LightningDataModule):
         fraction: float = 1.0,
         npratio: int = 4,
         one_row_per_impression: bool = False,
+        seed: int = 42,
+        use_labeled_test_set: bool = False,
+        labeled_test_set_split: float = 0.5
     ) -> None:
         super().__init__()
     
@@ -57,19 +60,52 @@ class OriginalModelDatamodule(LightningDataModule):
                 "history_size": self.hparams.history_size,
                 "fraction": self.hparams.fraction,
                 "npratio": self.hparams.npratio,
+                "seed": self.hparams.seed,
             }
             self.data_train: Optional[EbnerdDataset] = EbnerdDataset(
                 mode="train", one_row_per_impression=self.hparams.one_row_per_impression, **dataset_params
             )
-            self.data_val: Optional[EbnerdDataset] = EbnerdDataset(
-                mode="validation",
-                user_id_to_index=self.data_train.user_id_to_index,
-                article_id_to_index=self.data_train.article_id_to_index,
-                one_row_per_impression=self.hparams.one_row_per_impression,
-                **dataset_params
-            )
-            # one_row_per_impression should probably always be false for test
-            #self.data_test: Optional[EbnerdDataset] = EbnerdDataset(root_dir=self.hparams.root_dir, data_split=self.data_split, mode="test")
+            if self.hparams.use_labeled_test_set:
+                print('using labeled test set')
+                print(self.hparams.labeled_test_set_split)
+                self.data_val: Optional[EbnerdDataset] = EbnerdDataset(
+                    mode="validation",
+                    user_id_to_index=self.data_train.user_id_to_index,
+                    article_id_to_index=self.data_train.article_id_to_index,
+                    train_df_behaviors=self.data_train.df_behaviors,
+                    one_row_per_impression=self.hparams.one_row_per_impression,
+                    data_slice=[0,self.hparams.labeled_test_set_split],
+                    **dataset_params
+                )
+                # one_row_per_impression should probably always be false for test
+                self.data_test: Optional[EbnerdDataset] = EbnerdDataset(
+                    mode="validation",
+                    user_id_to_index=self.data_val.user_id_to_index,
+                    article_id_to_index=self.data_val.article_id_to_index,
+                    train_df_behaviors=self.data_train.df_behaviors,
+                    one_row_per_impression=False,
+                    data_slice=[self.hparams.labeled_test_set_split,1],
+                    **dataset_params
+                )
+
+            else:
+                self.data_val: Optional[EbnerdDataset] = EbnerdDataset(
+                    mode="validation",
+                    user_id_to_index=self.data_train.user_id_to_index,
+                    article_id_to_index=self.data_train.article_id_to_index,
+                    train_df_behaviors=self.data_train.df_behaviors,
+                    one_row_per_impression=self.hparams.one_row_per_impression,
+                    **dataset_params
+                )
+                # one_row_per_impression should probably always be false for test
+                self.data_test: Optional[EbnerdDataset] = EbnerdDataset(
+                    mode="test",
+                    user_id_to_index=self.data_val.user_id_to_index,
+                    article_id_to_index=self.data_val.article_id_to_index,
+                    train_df_behaviors=self.data_train.df_behaviors,
+                    one_row_per_impression=False,
+                    **dataset_params
+                )
 
     def train_dataloader(self) -> DataLoader[Any]:
         """Create and return the train dataloader.
@@ -103,7 +139,7 @@ class OriginalModelDatamodule(LightningDataModule):
         :return: The test dataloader.
         """
         return DataLoader(
-            dataset=self.data_val, #TODO change to test 
+            dataset=self.data_test,
             batch_size=self.batch_size_per_device,
             num_workers=self.hparams.num_workers,
             pin_memory=self.hparams.pin_memory,

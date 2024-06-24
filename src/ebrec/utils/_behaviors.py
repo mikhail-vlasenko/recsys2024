@@ -1051,7 +1051,7 @@ def add_prediction_scores(
     scores = (
         df.lazy()
         .select(pl.col(inview_col))
-        .with_row_index(GROUPBY_ID)
+        .with_row_count(GROUPBY_ID)
         .explode(inview_col)
         .with_columns(pl.Series(prediction_scores_col, scores).explode())
         .group_by(GROUPBY_ID)

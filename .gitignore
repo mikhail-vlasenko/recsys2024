@@ -25,6 +25,7 @@ venv/
 build
 venv
 utils/api_key.txt
+utils/wandb_api_key.txt
 
 # just for now:
 evaluate_predictions.py
