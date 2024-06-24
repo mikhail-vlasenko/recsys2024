@@ -23,6 +23,7 @@ from lightning.pytorch.loggers import WandbLogger
 from src.model.original_lightning_module import OriginalModule
 from src.model.components.model import Model
 from transformers import BertTokenizer, BertModel
+from copy import copy 
 
 device_name = "cuda" if torch.cuda.is_available() else "cpu"
 device = torch.device(device_name)
@@ -103,7 +104,7 @@ def train_and_test(data_download_path: str, args):
         dirpath="checkpoints/",
         filename=checkpoint_filename + "-{epoch}-{val_loss:.2f}",
         monitor="val/loss",
-        mode="min",
+        mode="min"
     )
 
     early_stopping_callback = EarlyStopping(
@@ -139,8 +140,10 @@ def train_and_test(data_download_path: str, args):
     else:
         trainer.fit(module, datamodule)
         #load the best model
-        print(checkpoint_callback.best_model_path)
-        module = OriginalModule.load_from_checkpoint(checkpoint_callback.best_model_path, net=net)
+        #print(checkpoint_callback.best_model_path)
+        #previous_module = copy.deepcopy(module)
+        #module = OriginalModule.load_from_checkpoint(checkpoint_callback.best_model_path, net=net)
+        #test_sum = torch.sum(module.user_embedding - previous_module.user_embedding)
 
     trainer.test(module, datamodule)
 
