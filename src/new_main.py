@@ -201,7 +201,7 @@ def main():
     try:
         wandb.login()
     except:
-        with open("src/utils/api_key.txt") as f:
+        with open("src/utils/wandb_api_key.txt") as f:
             wandb_api_key = f.read().strip()
             wandb.login(key=wandb_api_key)
 
