@@ -95,7 +95,7 @@ class EbnerdDataset(Dataset):
             self.compress_article_ids(article_id_to_index=self.article_id_to_index, df_behaviors=self.behaviors_before_explode)
             self.compress_user_ids(user_id_to_index=self.user_id_to_index, df_behaviors=self.behaviors_before_explode)
 
-            num_known = self.behaviors_before_explode.filter(pl.col(DEFAULT_KNOWN_USER_COL) == True).height
+            num_known = self.behaviors_before_explode.filter(pl.col(DEFAULT_KNOWN_USER_COL) == False).height
 
             print(self.mode, '------------------------------------------')
             print(num_known, 'is the number of known users in df_before_explode')
