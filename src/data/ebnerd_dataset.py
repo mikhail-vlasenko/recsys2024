@@ -84,13 +84,15 @@ class EbnerdDataset(Dataset):
         self.num_users: int
         self.num_articles: int
 
-        self.user_id_to_index = self.compress_user_ids(user_id_to_index=user_id_to_index)
-        self.article_id_to_index = self.compress_article_ids(article_id_to_index=article_id_to_index)
+        self.user_id_to_index = self.compress_user_ids(user_id_to_index=user_id_to_index, df_behaviors=self.df_behaviors)
+        self.article_id_to_index = self.compress_article_ids(article_id_to_index=article_id_to_index, df_behaviors=self.df_behaviors)
 
         if self.mode == "train":
             self.train_df_behaviors = self.df_behaviors
         else:
             self.train_df_behaviors = train_df_behaviors
+            self.compress_article_ids(article_id_to_index=self.article_id_to_index, df_behaviors=self.behaviors_before_explode)
+            self.compress_user_ids(user_id_to_index=self.user_id_to_index, df_behaviors=self.behaviors_before_explode)
 
         #assert max(self.df_behaviors[DEFAULT_USER_COL]) + 1 == len(self.df_behaviors[DEFAULT_USER_COL].unique()), "User ids are not continuous"
 
@@ -110,30 +112,30 @@ class EbnerdDataset(Dataset):
 
         return user_id, article_ids_clicked, labels
     
-    def compress_user_ids(self, user_id_to_index=None) -> dict[int, int]:
+    def compress_user_ids(self, df_behaviors, user_id_to_index=None) -> dict[int, int]:
 
         if user_id_to_index is None:
             # Get the unique user ids
-            unique_user_ids = self.df_behaviors[DEFAULT_USER_COL].unique().to_numpy()
+            unique_user_ids = df_behaviors[DEFAULT_USER_COL].unique().to_numpy()
 
             # Create a mapping from user id to index
             user_id_to_index = {user_id: index for index, user_id in enumerate(unique_user_ids)}
             self.num_users = len(user_id_to_index)
         else:
-            current_unique_user_ids = self.df_behaviors[DEFAULT_USER_COL].unique().to_numpy()
+            current_unique_user_ids = df_behaviors[DEFAULT_USER_COL].unique().to_numpy()
             for user_id in current_unique_user_ids:
                 if user_id not in user_id_to_index:
                     user_id_to_index[user_id] = len(user_id_to_index)
             self.num_users = len(user_id_to_index)
 
         # Replace the user ids with the index
-        self.df_behaviors = self.df_behaviors.with_columns(
+        df_behaviors = df_behaviors.with_columns(
             pl.col(DEFAULT_USER_COL).apply(lambda user_id: user_id_to_index[user_id]).alias(DEFAULT_USER_COL)
         )
 
         return user_id_to_index
 
-    def compress_article_ids(self, article_id_to_index=None, news_user=None) -> dict[int, int]:
+    def compress_article_ids(self, df_behaviors, article_id_to_index=None, news_user=None) -> dict[int, int]:
         if article_id_to_index is None:
             unique_article_ids = self.article_df[DEFAULT_ARTICLE_ID_COL].unique().to_numpy()
             article_id_to_index = {user_id: index for index, user_id in enumerate(unique_article_ids)}
@@ -152,7 +154,8 @@ class EbnerdDataset(Dataset):
                 func = lambda article_ids: [article_id_to_index[int(article_id)] for article_id in article_ids]
             else:
                 func = lambda article_id: article_id_to_index[int(article_id)]
-            self.df_behaviors = self.df_behaviors.with_columns(
+
+            df_behaviors = df_behaviors.with_columns(
                 pl.col(name).apply(func).alias(name)
             )
         if self.mode == "train" or self.mode == "validation":
