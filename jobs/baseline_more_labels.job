@@ -16,7 +16,7 @@ module load Anaconda3/2023.07-2
 
 srun python -m src.new_main \
   --ebnerd_variant ebnerd_demo \
-  --num_workers 11 \
+  --num_workers 1 \
   --batch_size 512 \
   --use_labeled_test_set \
   --labeled_test_set_split 0.5 \
