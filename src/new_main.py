@@ -140,6 +140,10 @@ def train_and_test(data_download_path: str, args):
     else:
         trainer.fit(module, datamodule)
         #load the best model
+        checkpoint_path = checkpoint_callback.best_model_path
+        artifact = wandb.Artifact('Weighting_model', type='model')
+        artifact.add_file(checkpoint_path)
+        wandb.log_artifact(artifact)
         #print(checkpoint_callback.best_model_path)
         #previous_module = copy.deepcopy(module)
         #module = OriginalModule.load_from_checkpoint(checkpoint_callback.best_model_path, net=net)
@@ -153,7 +157,7 @@ def train_and_test(data_download_path: str, args):
         add_known_user_column, known_users=datamodule.data_train.df_behaviors[DEFAULT_USER_COL]
     )
 
-    metrics = None
+    metrics = None, None
     if args.use_labeled_test_set:
         test_df_known, test_df = split_dataframe(test_df)
         num_known_users, num_unknown_users = count_users(test_df)
@@ -193,7 +197,7 @@ def train_and_test(data_download_path: str, args):
 
     wandb.finish()
 
-    return metrics, None
+    return metrics
 
 def main():
     args = get_training_args()
