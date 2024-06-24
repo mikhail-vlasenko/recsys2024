@@ -108,7 +108,7 @@ def train_and_test(data_download_path: str, args):
     )
 
     early_stopping_callback = EarlyStopping(
-        monitor="val/loss", patience=1, mode="min"
+        monitor="val_loss", patience=1, mode="min"
     )
 
     wandb_logger = WandbLogger(
