@@ -149,7 +149,11 @@ def train_and_test(data_download_path: str, args):
 
     trainer.test(module, datamodule)
 
-    test_df: pl.DataFrame = datamodule.data_test.behaviors_before_explode #if type(datamodule.data_test.behaviors_before_explode) == pl.LazyFrame else datamodule.data_test.behaviors_before_explode
+    def revert_explosion(df, id_col, cols_to_group):
+        return (df.groupby(id_col)
+                .agg([pl.col(col).list() for col in cols_to_group]))
+
+    test_df: pl.DataFrame = revert_explosion(datamodule.data_test.df_behaviors, DEFAULT_IMPRESSION_ID_COL, ['article_ids_inview', 'labels']) #if type(datamodule.data_test.behaviors_before_explode) == pl.LazyFrame else datamodule.data_test.behaviors_before_explod
     scores = np.array(module.test_predictions)[..., np.newaxis]
     test_df = add_prediction_scores(test_df, scores.tolist()).pipe(
         add_known_user_column, known_users=datamodule.data_train.df_behaviors[DEFAULT_USER_COL]
