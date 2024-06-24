@@ -34,6 +34,7 @@ class Model(nn.Module):
         self.nhidden = args.nhidden
         self.dim = self.ncaps * self.nhidden
         self.routit = args.routit
+        self.ignore_edge_feats = args.ignore_edge_feats
 
         self.n_user = n_user
 
@@ -65,7 +66,7 @@ class Model(nn.Module):
         self.routers = [
             RoutingLayer(
                 routing_layers[i], out_caps[i], self.nhidden, args.dropout_rate, inp_caps[i],
-                edge_feature_dim=self.edge_feature_dim, lora_edge_feats=False
+                edge_feature_dim=(0 if self.ignore_edge_feats else self.edge_feature_dim), lora_edge_feats=False
             )
             for i in range(self.n_iter)
         ]
