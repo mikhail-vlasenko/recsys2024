@@ -4,7 +4,7 @@
 #SBATCH --gpus=1
 #SBATCH --job-name=ResNet-Imbalanced
 #SBATCH --ntasks=1
-#SBATCH --cpus-per-task=18
+#SBATCH --cpus-per-task=1
 #SBATCH --time=06:00:00
 #SBATCH --output=job_logs/baseline_run-%A.out
 
