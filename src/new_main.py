@@ -1,7 +1,7 @@
 import numpy as np
 
 from src.ebrec.utils._behaviors import add_prediction_scores, add_known_user_column
-from src.ebrec.utils._constants import DEFAULT_IMPRESSION_ID_COL, DEFAULT_USER_COL
+from src.ebrec.utils._constants import DEFAULT_IMPRESSION_ID_COL, DEFAULT_USER_COL, DEFAULT_KNOWN_USER_COL
 from src.utils.get_training_args import get_training_args
 from src.utils.print_mean_std import print_mean_std
 from src.data.original_model_datamodule import OriginalModelDatamodule
@@ -28,7 +28,7 @@ from copy import copy
 device_name = "cuda" if torch.cuda.is_available() else "cpu"
 device = torch.device(device_name)
 
-def split_dataframe(df: pl.DataFrame, known_user_col: str = DEFAULT_USER_COL):
+def split_dataframe(df: pl.DataFrame, known_user_col: str = DEFAULT_KNOWN_USER_COL):
     """
     Splits the DataFrame into two: one with only known users and one with both known and unknown users.
     Args:
@@ -41,7 +41,7 @@ def split_dataframe(df: pl.DataFrame, known_user_col: str = DEFAULT_USER_COL):
     all_users_df = df  # Since all_users_df is the same as the input df
     return known_users_df, all_users_df
 
-def count_users(df: pl.DataFrame, known_user_col: str = DEFAULT_USER_COL):
+def count_users(df: pl.DataFrame, known_user_col: str = DEFAULT_KNOWN_USER_COL):
     """
     Counts the number of known and unknown users in the DataFrame.
     Args:
