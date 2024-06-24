@@ -108,17 +108,13 @@ def train_and_test(data_download_path: str, args):
         mode="min"
     )
 
-    early_stopping_callback = EarlyStopping(
-        monitor="val_loss", patience=2, mode="min"
-    )
-
     wandb_logger = WandbLogger(
         entity="inverse_rl", project="RecSys", config=vars(args)
     )
 
     wandb_logger.watch(module, log="all")
 
-    callbacks = [checkpoint_callback, early_stopping_callback]
+    callbacks = [checkpoint_callback]
 
     trainer_args = {
         "callbacks": callbacks,
