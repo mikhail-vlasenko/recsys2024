@@ -29,7 +29,8 @@ from src.ebrec.utils._constants import (
     DEFAULT_TITLE_COL,
     DEFAULT_USER_COL,
     DEFAULT_NER_COL,
-    DEFAULT_ENTITIES_COL, DEFAULT_ARTICLE_ID_COL, DEFAULT_SCROLL_PERCENTAGE_COL, DEFAULT_READ_TIME_COL
+    DEFAULT_ENTITIES_COL, DEFAULT_ARTICLE_ID_COL, DEFAULT_SCROLL_PERCENTAGE_COL, DEFAULT_READ_TIME_COL,
+    DEFAULT_KNOWN_USER_COL
 )
 
 from src.ebrec.utils._behaviors import (
@@ -93,6 +94,11 @@ class EbnerdDataset(Dataset):
             self.train_df_behaviors = train_df_behaviors
             self.compress_article_ids(article_id_to_index=self.article_id_to_index, df_behaviors=self.behaviors_before_explode)
             self.compress_user_ids(user_id_to_index=self.user_id_to_index, df_behaviors=self.behaviors_before_explode)
+
+            num_known = self.behaviors_before_explode.filter(pl.col(DEFAULT_KNOWN_USER_COL) == True).height
+
+            print(self.mode, '------------------------------------------')
+            print(num_known, 'is the number of known users in df_before_explode')
 
         #assert max(self.df_behaviors[DEFAULT_USER_COL]) + 1 == len(self.df_behaviors[DEFAULT_USER_COL].unique()), "User ids are not continuous"
 
