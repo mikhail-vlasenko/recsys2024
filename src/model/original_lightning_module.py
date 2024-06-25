@@ -203,8 +203,8 @@ class OriginalModule(LightningModule):
         loss, scores, labels = self.loss_from_batch(batch, mode="train", ret_scores=True)
         #print("percentagepositive", torch.sum(labels).item()/len(labels))
 
-        self.train_labels.append(labels.cpu().detach().numpy())
-        self.train_predictions.append(scores.cpu().detach().numpy())
+        self.train_labels.extend(list(labels.cpu().detach().numpy()))
+        self.train_predictions.extend(list(scores.cpu().detach().numpy()))
 
         self.metrics.labels += [labels.cpu().detach().numpy()]
         self.metrics.predictions += [scores.cpu().detach().numpy()]
