@@ -6,7 +6,7 @@ from src.utils.get_training_args import get_training_args
 from src.utils.print_mean_std import print_mean_std
 from src.data.original_model_datamodule import OriginalModelDatamodule
 from src.data.ebnerd_variants import EbnerdVariants
-from src.ebrec.evaluation import MetricEvaluator, AucScore, NdcgScore, MrrScore
+from src.ebrec.evaluation import MetricEvaluator, AucScore, NdcgScore, MrrScore, F1Score
 from pathlib import Path
 
 import wandb
@@ -163,7 +163,6 @@ def train_and_test(data_download_path: str, args):
         df_reverted = df.groupby(id_col, maintain_order=True).agg(agg_other_cols ,article_ids_inview = pl.col('article_ids_inview'), labels = pl.col('labels'))# + agg_other_cols)
 
         return df_reverted
-    
 
     test_df: pl.DataFrame = revert_explosion(datamodule.data_test.df_behaviors, DEFAULT_IMPRESSION_ID_COL, ['article_ids_inview', 'labels']) #if type(datamodule.data_test.behaviors_before_explode) == pl.LazyFrame else datamodule.data_test.behaviors_before_explod
     
@@ -180,18 +179,29 @@ def train_and_test(data_download_path: str, args):
         print('count of known users', num_known_users)
         print('count of unknown users', num_unknown_users)
 
+        if args.flat_metrics:
+            known_labels = test_df_known["labels"].to_list().flatten()
+            known_scores = test_df_known["scores"].to_list().flatten()
+            labels = test_df["labels"].to_list().flatten()
+            scores = test_df["scores"].to_list().flatten()
+
+        known_labels = test_df_known["labels"].to_list()
+        known_scores = test_df_known["scores"].to_list()
+        labels = test_df["labels"].to_list()
+        scores = test_df["scores"].to_list()
+
         print(test_df_known.head(10))
         metrics_known = MetricEvaluator(
-            labels=test_df_known["labels"].to_list(),
-            predictions=test_df_known["scores"].to_list(),
-            metric_functions=[AucScore(), MrrScore(), NdcgScore(k=5), NdcgScore(k=10)],
+            labels=known_labels,
+            predictions=known_scores,
+            metric_functions=[AucScore(), MrrScore(), NdcgScore(k=5), NdcgScore(k=10), F1Score(threshold=0.5)],
         )
 
         # trainer.fit(module, datamodule)
         metrics = MetricEvaluator(
-            labels=test_df["labels"].to_list(),
-            predictions=test_df["scores"].to_list(),
-            metric_functions=[AucScore(), MrrScore(), NdcgScore(k=5), NdcgScore(k=10)],
+            labels=labels,
+            predictions=scores,
+            metric_functions=[AucScore(), MrrScore(), NdcgScore(k=5), NdcgScore(k=10), F1Score(threshold=0.5)],
         )
 
         metrics = metrics.evaluate().evaluations
