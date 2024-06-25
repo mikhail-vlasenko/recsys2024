@@ -123,7 +123,8 @@ def train_and_test(data_download_path: str, args):
         "logger": wandb_logger,
         "accelerator": device_name,
         "devices": "auto",
-        'max_epochs': args.n_epochs
+        'max_epochs': args.n_epochs,
+        'limit_test_batches':1
     }
 
     trainer = L.Trainer(**trainer_args)
@@ -149,6 +150,7 @@ def train_and_test(data_download_path: str, args):
     trainer.test(module, datamodule)
     if args.flat_metrics:
         labels = datamodule.data_test.df_behaviors["labels"].to_list()
+        print(labels)
         scores = module.test_predictions
         metrics = MetricEvaluator(
             labels=labels,
