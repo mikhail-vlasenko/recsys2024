@@ -38,7 +38,7 @@ class Model(nn.Module):
 
         self.n_user = n_user
 
-        n_group = 12
+        n_group = 7
         word_dim = 50
         # param initialization is a little different from the original
         self.group_embedding = nn.Embedding(n_group, word_dim)
