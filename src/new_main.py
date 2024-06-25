@@ -63,7 +63,8 @@ def train_and_test(data_download_path: str, args):
         api_key=args.api_key, history_size=args.history_size, fraction=args.fraction, npratio=args.npratio,
         one_row_per_impression=args.one_row_impression, seed = args.seed, 
         use_labeled_test_set=args.use_labeled_test_set, 
-        labeled_test_set_split = args.labeled_test_set_split
+        labeled_test_set_split = args.labeled_test_set_split,
+        test_on_train=args.test_on_train
     )
 
     datamodule.setup()

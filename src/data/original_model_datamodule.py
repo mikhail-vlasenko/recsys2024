@@ -21,7 +21,8 @@ class OriginalModelDatamodule(LightningDataModule):
         one_row_per_impression: bool = False,
         seed: int = 42,
         use_labeled_test_set: bool = False,
-        labeled_test_set_split: float = 0.5
+        labeled_test_set_split: float = 0.5,
+        test_on_train = False,
     ) -> None:
         super().__init__()
     
@@ -77,6 +78,7 @@ class OriginalModelDatamodule(LightningDataModule):
                     data_slice=[0,self.hparams.labeled_test_set_split],
                     **dataset_params
                 )
+
                 # one_row_per_impression should probably always be false for test
                 self.data_test: Optional[EbnerdDataset] = EbnerdDataset(
                     mode="validation",
@@ -138,12 +140,21 @@ class OriginalModelDatamodule(LightningDataModule):
 
         :return: The test dataloader.
         """
-        return DataLoader(
+        loader = DataLoader(
             dataset=self.data_test,
             batch_size=self.batch_size_per_device,
             num_workers=self.hparams.num_workers,
             pin_memory=self.hparams.pin_memory,
             shuffle=False,
         )
+        if self.hparams.test_on_train:
+            loader = DataLoader(
+                dataset=self.data_train,
+                batch_size=self.batch_size_per_device,
+                num_workers=self.hparams.num_workers,
+                pin_memory=self.hparams.pin_memory,
+                shuffle=False,
+            )
+        return loader
 
 

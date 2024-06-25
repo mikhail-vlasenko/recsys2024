@@ -254,7 +254,7 @@ class Model(nn.Module):
         conv_item = self.conv_layers['item'](item_group_embed)
         h_item = F.relu(conv_item)
 
-        pooled_item = self.pool_item(h_item)
+        pooled_item = self.F(h_item)
         # and put it back to NHWC for consistency
         pooled_item = pooled_item.permute(0, 2, 3, 1)
         pool_item = pooled_item.reshape(self.batch_size, -1, self.input_size_item)

@@ -68,6 +68,7 @@ def get_training_args():
     parser.add_argument('--checkpoint_list', type=list_of_strings, default=None, help='list of wandbcheckpoints')
     parser.add_argument('--ignore_edge_feats', action='store_true', default=False)
     parser.add_argument('--flat_metrics', action='store_true', default=False)
+    parser.add_argument('--test_on_train', action='store_true', default=False)
 
     args = parser.parse_args()
     if args.api_key is None:
