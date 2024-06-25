@@ -124,8 +124,7 @@ def train_and_test(data_download_path: str, args):
         "logger": wandb_logger,
         "accelerator": device_name,
         "devices": "auto",
-        'max_epochs': args.n_epochs,
-        'limit_test_batches':1
+        'max_epochs': args.n_epochs
     }
 
     trainer = L.Trainer(**trainer_args)
