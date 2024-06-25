@@ -153,6 +153,7 @@ def train_and_test(data_download_path: str, args):
         labels = datamodule.data_test.df_behaviors["labels"].to_list()
         print(labels)
         scores = module.test_predictions
+        print(scores)
         auroc = AUROC(task="binary")
         aurmetric = auroc(torch.tensor(scores), torch.tensor(labels))
         print(aurmetric)
