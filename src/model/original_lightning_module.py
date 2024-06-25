@@ -132,7 +132,7 @@ class OriginalModule(LightningModule):
         return user_id, article_index, user_news, news_user, labels
 
     def compute_loss(self, scores, labels, user_embeddings, news_embeddings):
-        total_loss = self.criterion(scores, labels.float())
+        total_loss = self.criterion(scores, labels.float(), reduction='sum')
 
         infer_loss = self.net.infer_loss(user_embeddings, news_embeddings)
 

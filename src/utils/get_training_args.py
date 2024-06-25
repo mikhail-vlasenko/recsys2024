@@ -42,7 +42,7 @@ def get_training_args():
                         help='list of filter sizes, e.g., --filter_sizes 2 3')
     parser.add_argument('--ncaps', type=int, default=7,
                         help='Maximum number of capsules per layer.')
-    parser.add_argument('--dcaps', type=int, default=0, help='Decrease this number of capsules per layer.')
+    parser.add_argument('--dcaps', type=int, default=0, help='Decrease this number of capsules per layer. as in you decrease the number of capsules by x each layer')
     parser.add_argument('--nhidden', type=int, default=16,
                             help='Number of hidden units per capsule.')
     parser.add_argument('--routit', type=int, default=7,
