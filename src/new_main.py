@@ -26,6 +26,7 @@ from src.model.components.model import Model
 from transformers import BertTokenizer, BertModel
 from copy import copy 
 import os
+from torchmetrics import AUROC, F1Score
 
 device_name = "cuda" if torch.cuda.is_available() else "cpu"
 device = torch.device(device_name)
@@ -152,12 +153,12 @@ def train_and_test(data_download_path: str, args):
         labels = datamodule.data_test.df_behaviors["labels"].to_list()
         print(labels)
         scores = module.test_predictions
-        metrics = MetricEvaluator(
-            labels=labels,
-            predictions=scores,
-            metric_functions=[AucScore(), MrrScore(), NdcgScore(k=5), NdcgScore(k=10), F1Score(threshold=0.5)],
-        ).evaluate().evaluations
-        print(metrics)
+        auroc = AUROC(task="binary")
+        aurmetric = auroc(scores, labels)
+        print(aurmetric)
+        f1 = F1Score()
+        f1metric = f1(scores, labels)
+        print(f1metric)
         return metrics, None
 
     def revert_explosion(df, id_col, exploded_cols):

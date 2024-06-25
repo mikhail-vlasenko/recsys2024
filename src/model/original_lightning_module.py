@@ -8,6 +8,7 @@ from src.model.components.model import Model
 from src.data.data_loader import random_neighbor, optimized_random_neighbor
 from src.ebrec.evaluation.metrics_protocols import MetricEvaluator, AucScore, MrrScore, NdcgScore
 import logging
+from torchmetrics import AUROC, F1Score
 from tqdm import tqdm
 
 
