@@ -201,6 +201,9 @@ class EbnerdDataset(Dataset):
         # print(prepared_entities)
         encoding = transformer_tokenizer(prepared_entities, return_tensors='pt', padding='longest', truncation=True, is_split_into_words =True, max_length=max_entity_length)
         entities_word_ids = encoding['input_ids']
+        print(entities_word_ids)
+        print(set(entities_word_ids))
+        print(entities_word_ids.shape)
 
         #encode the entity groups
         entity_group_list = self.article_df[DEFAULT_ENTITIES_COL].to_list()
