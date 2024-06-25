@@ -177,6 +177,7 @@ def train_and_test(data_download_path: str, args):
         print('count of known users', num_known_users)
         print('count of unknown users', num_unknown_users)
 
+        print(test_df_known.head(10))
         metrics_known = MetricEvaluator(
             labels=test_df_known["labels"].to_list(),
             predictions=test_df_known["scores"].to_list(),
