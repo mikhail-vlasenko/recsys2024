@@ -161,6 +161,7 @@ class OriginalModule(LightningModule):
         else:
             scores = self.net.get_edge_probability(user_projected, news_projected)
 
+        scores = F.softmax(scores, dim=0)
         return scores, labels
 
     def loss_from_batch(

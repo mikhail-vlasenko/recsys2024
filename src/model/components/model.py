@@ -95,6 +95,7 @@ class Model(nn.Module):
 
     def get_edge_probability(self, user_embeddings, news_embeddings):
         scores = torch.squeeze(torch.sum(user_embeddings * news_embeddings, dim=-1))
+        
         return scores
 
     def apply_projection(self, x, y):
