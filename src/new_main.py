@@ -144,10 +144,11 @@ def train_and_test(data_download_path: str, args):
         wandb.log_artifact(artifact)
         #print(checkpoint_callback.best_model_path)
         #previous_module = copy.deepcopy(module)
-        module = OriginalModule.load_from_checkpoint(checkpoint_callback.best_model_path, net=net)
+        #module = OriginalModule.load_from_checkpoint(checkpoint_callback.best_model_path, net=net)
         #test_sum = torch.sum(module.user_embedding - previous_module.user_embedding)
 
     trainer.test(module, datamodule)
+
     if args.flat_metrics:
         labels = datamodule.data_test.df_behaviors["labels"].to_list()
         print(labels)
@@ -159,6 +160,16 @@ def train_and_test(data_download_path: str, args):
         f1 = F1Score(task="binary")
         f1metric = f1(torch.tensor(scores), torch.tensor(labels))
         print(f1metric)
+
+        auroc = AUROC(task="binary")
+        f1 = F1Score(task="binary")
+
+        train_aur = auroc(torch.tensor(module.train_predictions), torch.tensor(module.train_labels))
+        train_f1 = f1(torch.tensor(module.train_predictions), torch.tensor(module.train_labels))
+
+
+        metrics = {'AUROC': aurmetric, 'F1': f1metric, 'train_aur': train_aur, 'train_f1': train_f1}
+        print(metrics)
         return metrics, None
 
     def revert_explosion(df, id_col, exploded_cols):
@@ -192,12 +203,6 @@ def train_and_test(data_download_path: str, args):
         num_known_users, num_unknown_users = count_users(test_df)
         print('count of known users', num_known_users)
         print('count of unknown users', num_unknown_users)
-
-        if args.flat_metrics:
-            known_labels = test_df_known["labels"].to_numpy().flatten().tolist()
-            known_scores = test_df_known["scores"].to_numpy().flatten().tolist()
-            labels = test_df["labels"].to_numpy().flatten().tolist()
-            scores = test_df["scores"].to_numpy().flatten().tolist()
 
         known_labels = test_df_known["labels"].to_list()
         known_scores = test_df_known["scores"].to_list()

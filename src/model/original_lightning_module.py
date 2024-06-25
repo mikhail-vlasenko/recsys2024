@@ -84,6 +84,8 @@ class OriginalModule(LightningModule):
             self.val_user_edge_index.append(set(np.array(val_user_news[i])[:, 0]))
 
         self.test_predictions = []
+        self.train_labels = []
+        self.train_predictions = []
         
         #TODO add test set
 
@@ -200,6 +202,9 @@ class OriginalModule(LightningModule):
 
         loss, scores, labels = self.loss_from_batch(batch, mode="train", ret_scores=True)
         #print("percentagepositive", torch.sum(labels).item()/len(labels))
+
+        self.train_labels.append(labels.cpu().detach().numpy())
+        self.train_predictions.append(scores.cpu().detach().numpy())
 
         self.metrics.labels += [labels.cpu().detach().numpy()]
         self.metrics.predictions += [scores.cpu().detach().numpy()]
