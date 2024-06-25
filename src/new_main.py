@@ -26,7 +26,8 @@ from src.model.components.model import Model
 from transformers import BertTokenizer, BertModel
 from copy import copy 
 import os
-from torchmetrics import AUROC, F1Score
+from torchmetrics import AUROC
+from torchmetrics import F1Score as F1SCORE
 
 device_name = "cuda" if torch.cuda.is_available() else "cpu"
 device = torch.device(device_name)
@@ -151,25 +152,20 @@ def train_and_test(data_download_path: str, args):
     trainer.test(module, datamodule)
 
     if args.flat_metrics:
-        labels = datamodule.data_test.df_behaviors["labels"].to_list()
+        if args.test_on_train:
+          labels = datamodule.data_train.df_behaviors["labels"].to_list()
+        else:
+          labels = datamodule.data_test.df_behaviors["labels"].to_list()
         print(labels)
         scores = module.test_predictions
         print(scores)
         auroc = AUROC(task="binary")
         aurmetric = auroc(torch.tensor(scores), torch.tensor(labels))
         print(aurmetric)
-        f1 = F1Score(task="binary")
+        f1 = F1SCORE(task="binary")
         f1metric = f1(torch.tensor(scores), torch.tensor(labels))
         print(f1metric)
-
-        auroc = AUROC(task="binary")
-        f1 = F1Score(task="binary")
-
-        train_aur = auroc(torch.tensor(module.train_predictions), torch.tensor(module.train_labels))
-        train_f1 = f1(torch.tensor(module.train_predictions), torch.tensor(module.train_labels))
-
-
-        metrics = {'AUROC': aurmetric, 'F1': f1metric, 'train_aur': train_aur, 'train_f1': train_f1}
+        metrics = {'AUROC': aurmetric, 'F1': f1metric}
         print(metrics)
         return metrics, None
 
@@ -189,8 +185,11 @@ def train_and_test(data_download_path: str, args):
 
         return df_reverted
 
-    test_df: pl.DataFrame = revert_explosion(datamodule.data_test.df_behaviors, DEFAULT_IMPRESSION_ID_COL, ['article_ids_inview', 'labels']) #if type(datamodule.data_test.behaviors_before_explode) == pl.LazyFrame else datamodule.data_test.behaviors_before_explod
-    
+    if args.test_on_train:
+      test_df: pl.DataFrame = revert_explosion(datamodule.data_train.df_behaviors, DEFAULT_IMPRESSION_ID_COL, ['article_ids_inview', 'labels']) #if type(datamodule.data_test.behaviors_before_explode) == pl.LazyFrame else datamodule.data_test.behaviors_before_explod
+    else:
+       test_df: pl.DataFrame = revert_explosion(datamodule.data_test.df_behaviors, DEFAULT_IMPRESSION_ID_COL, ['article_ids_inview', 'labels']) #if type(datamodule.data_test.behaviors_before_explode) == pl.LazyFrame else datamodule.data_test.behaviors_before_explod
+
     scores = np.array(module.test_predictions)[..., np.newaxis]
     
     
