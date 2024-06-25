@@ -147,6 +147,16 @@ def train_and_test(data_download_path: str, args):
         #test_sum = torch.sum(module.user_embedding - previous_module.user_embedding)
 
     trainer.test(module, datamodule)
+    if args.flat_metrics:
+        labels = datamodule.data_test.df_behaviors["labels"].to_list()
+        scores = module.test_predictions
+        metrics = MetricEvaluator(
+            labels=labels,
+            predictions=scores,
+            metric_functions=[AucScore(), MrrScore(), NdcgScore(k=5), NdcgScore(k=10), F1Score(threshold=0.5)],
+        )
+        print(metrics)
+        return metrics, None
 
     def revert_explosion(df, id_col, exploded_cols):
         # Identify columns that are not exploded
@@ -167,6 +177,7 @@ def train_and_test(data_download_path: str, args):
     test_df: pl.DataFrame = revert_explosion(datamodule.data_test.df_behaviors, DEFAULT_IMPRESSION_ID_COL, ['article_ids_inview', 'labels']) #if type(datamodule.data_test.behaviors_before_explode) == pl.LazyFrame else datamodule.data_test.behaviors_before_explod
     
     scores = np.array(module.test_predictions)[..., np.newaxis]
+    
     
     test_df = add_prediction_scores(test_df, scores.tolist()).pipe(
         add_known_user_column, known_users=datamodule.data_train.df_behaviors[DEFAULT_USER_COL]
