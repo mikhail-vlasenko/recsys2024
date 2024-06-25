@@ -10,7 +10,7 @@ class Model(nn.Module):
     def __init__(self, args, news_title, news_entity, news_group, n_user):
         super(Model, self).__init__()
 
-        n_word = 30522
+        n_word = 279215
         self.use_group = args.use_group
         self.n_filters = args.n_filters
         self.filter_sizes = args.filter_sizes
