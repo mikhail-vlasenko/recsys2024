@@ -182,8 +182,8 @@ def train_and_test(data_download_path: str, args):
         if args.flat_metrics:
             known_labels = test_df_known["labels"].to_numpy().flatten().tolist()
             known_scores = test_df_known["scores"].to_numpy().flatten().tolist()
-            labels = test_df["labels"].to_list().to_numpy().flatten().tolist()
-            scores = test_df["scores"].to_list().to_numpy().flatten().tolist()
+            labels = test_df["labels"].to_numpy().flatten().tolist()
+            scores = test_df["scores"].to_numpy().flatten().tolist()
 
         known_labels = test_df_known["labels"].to_list()
         known_scores = test_df_known["scores"].to_list()
