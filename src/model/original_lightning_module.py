@@ -249,7 +249,7 @@ class OriginalModule(LightningModule):
     ) -> torch.Tensor:
         
         loss, scores, labels = self.loss_from_batch(batch, mode="test", ret_scores=True)
-        scores = F.sigmoid(scores)
+        #scores = F.sigmoid(scores)
 
         self.test_predictions.extend(list(scores.cpu().detach().numpy()))
         
