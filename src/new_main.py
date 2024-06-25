@@ -154,7 +154,7 @@ def train_and_test(data_download_path: str, args):
             labels=labels,
             predictions=scores,
             metric_functions=[AucScore(), MrrScore(), NdcgScore(k=5), NdcgScore(k=10), F1Score(threshold=0.5)],
-        )
+        ).evaluate().evaluations
         print(metrics)
         return metrics, None
 
