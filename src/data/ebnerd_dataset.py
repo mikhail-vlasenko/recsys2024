@@ -193,6 +193,7 @@ class EbnerdDataset(Dataset):
         titles_list= self.article_df[DEFAULT_TITLE_COL].to_list()
         encoding = transformer_tokenizer(titles_list, return_tensors='pt', padding='max_length', max_length=max_title_length, truncation=True)
         title_word_ids = encoding['input_ids']
+        print(title_word_ids)
 
         #encode the named entities
         entities_list = self.article_df[DEFAULT_NER_COL].to_list()
@@ -201,14 +202,18 @@ class EbnerdDataset(Dataset):
         # print(prepared_entities)
         encoding = transformer_tokenizer(prepared_entities, return_tensors='pt', padding='longest', truncation=True, is_split_into_words =True, max_length=max_entity_length)
         entities_word_ids = encoding['input_ids']
+        print(self.mode)
         print(entities_word_ids)
-        print(set(entities_word_ids))
-        print(entities_word_ids.shape)
 
         #encode the entity groups
         entity_group_list = self.article_df[DEFAULT_ENTITIES_COL].to_list()
-        entity_group_dict = self.build_dictionary(entity_group_list)
+        #entity_group_dict = self.build_dictionary(entity_group_list)
+        entity_group_dict = {'[PAD]': 0, 'EVENT': 1, 'ORG': 2, 'PER': 3, 'MISC': 4, 'PROD': 5, 'LOC': 6}
         ner_word_ids = self.texts_to_id(entity_group_list, entity_group_dict, max_group_length)
+        ner_word_ids = torch.tensor(ner_word_ids)
+        #print(entity_group_list)
+        #print(entity_group_dict)
+        print(ner_word_ids)
 
         return title_word_ids, entities_word_ids, ner_word_ids
     
@@ -227,6 +232,7 @@ class EbnerdDataset(Dataset):
         return word_dict
 
     def texts_to_id(self, texts: list[list[str]], word_dict: dict, max_length: int):
+        
         return [
             (tokens := [word_dict.get(word, word_dict['[PAD]']) for word in text])[:max_length] +
             [word_dict['[PAD]']] * (max_length - len(tokens))
