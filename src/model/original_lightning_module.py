@@ -161,7 +161,6 @@ class OriginalModule(LightningModule):
         else:
             scores = self.net.get_edge_probability(user_projected, news_projected)
 
-        scores = F.softmax(scores, dim=0)
         return scores, labels
 
     def loss_from_batch(
@@ -250,6 +249,7 @@ class OriginalModule(LightningModule):
     ) -> torch.Tensor:
         
         loss, scores, labels = self.loss_from_batch(batch, mode="test", ret_scores=True)
+        scores = F.sigmoid(scores)
 
         self.test_predictions.extend(list(scores.cpu().detach().numpy()))
         
