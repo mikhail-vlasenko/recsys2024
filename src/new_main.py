@@ -156,7 +156,7 @@ def train_and_test(data_download_path: str, args):
         auroc = AUROC(task="binary")
         aurmetric = auroc(torch.tensor(scores), torch.tensor(labels))
         print(aurmetric)
-        f1 = F1Score()
+        f1 = F1Score(task="binary")
         f1metric = f1(torch.tensor(scores), torch.tensor(labels))
         print(f1metric)
         return metrics, None
