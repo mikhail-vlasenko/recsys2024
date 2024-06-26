@@ -84,8 +84,6 @@ class OriginalModule(LightningModule):
             self.val_user_edge_index.append(set(np.array(val_user_news[i])[:, 0]))
 
         self.test_predictions = []
-        self.train_labels = []
-        self.train_predictions = []
         
         #TODO add test set
 
@@ -185,7 +183,6 @@ class OriginalModule(LightningModule):
         We need to set the model to training mode here. -> swap out the article features to the train ones
         """
         self.net.train()
-        self.metrics = MetricEvaluator(labels=[], predictions=[], metric_functions=[AucScore(), MrrScore(), NdcgScore(k=5), NdcgScore(k=10)])
         train_news_title, train_news_entity, train_news_group = self.train_news_title.to(self.device), self.train_news_entity.to(self.device), self.train_news_group.to(self.device)
         self.net.set_article_features(train_news_title, train_news_entity, train_news_group)
 
@@ -202,12 +199,6 @@ class OriginalModule(LightningModule):
 
         loss, scores, labels = self.loss_from_batch(batch, mode="train", ret_scores=True)
         #print("percentagepositive", torch.sum(labels).item()/len(labels))
-
-        self.train_labels.extend(list(labels.cpu().detach().numpy()))
-        self.train_predictions.extend(list(scores.cpu().detach().numpy()))
-
-        self.metrics.labels += [labels.cpu().detach().numpy()]
-        self.metrics.predictions += [scores.cpu().detach().numpy()]
         #metric_dict = self.metrics.evaluate().evaluations
 
         self.log("train/loss", loss, on_step=True, on_epoch=True, prog_bar=True, logger=True)

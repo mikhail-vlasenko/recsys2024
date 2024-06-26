@@ -193,7 +193,7 @@ class EbnerdDataset(Dataset):
         titles_list= self.article_df[DEFAULT_TITLE_COL].to_list()
         encoding = transformer_tokenizer(titles_list, return_tensors='pt', padding='max_length', max_length=max_title_length, truncation=True)
         title_word_ids = encoding['input_ids']
-        print(title_word_ids)
+        # print(title_word_ids)
 
         #encode the named entities
         entities_list = self.article_df[DEFAULT_NER_COL].to_list()
@@ -202,8 +202,8 @@ class EbnerdDataset(Dataset):
         # print(prepared_entities)
         encoding = transformer_tokenizer(prepared_entities, return_tensors='pt', padding='longest', truncation=True, is_split_into_words =True, max_length=max_entity_length)
         entities_word_ids = encoding['input_ids']
-        print(self.mode)
-        print(entities_word_ids)
+        # print(self.mode)
+        # print(entities_word_ids)
 
         #encode the entity groups
         entity_group_list = self.article_df[DEFAULT_ENTITIES_COL].to_list()
