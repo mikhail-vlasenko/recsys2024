@@ -167,6 +167,7 @@ def train_and_test(data_download_path: str, args):
         print(f1metric)
         metrics = {'AUROC': aurmetric, 'F1': f1metric}
         print(metrics)
+        wandb.finish()
         return metrics, None
 
     def revert_explosion(df, id_col, exploded_cols):

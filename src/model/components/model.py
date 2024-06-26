@@ -59,7 +59,8 @@ class Model(nn.Module):
         self.user_transform = nn.Linear(self.user_dim, self.dim)
         self.item_transform = nn.Linear(self.cnn_out_size, self.dim)
 
-        assert self.n_iter == 2, "router isn't adapted to work with n_iter != 2"
+        #assert self.n_iter == 2, "router isn't adapted to work with n_iter != 2"
+        assert self.n_iter < 3, "router isn't adapted to work with n_iter > 2"
         routing_layers = [i for i in range(self.n_iter)]
         inp_caps = [None, self.ncaps]
         out_caps = [self.ncaps, self.ncaps - self.dcaps]
