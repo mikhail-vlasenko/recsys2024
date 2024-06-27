@@ -1,7 +1,7 @@
 import numpy as np
 
 from src.ebrec.utils._behaviors import add_prediction_scores, add_known_user_column
-from src.ebrec.utils._constants import DEFAULT_IMPRESSION_ID_COL, DEFAULT_USER_COL, DEFAULT_KNOWN_USER_COL
+from src.ebrec.utils._constants import DEFAULT_IMPRESSION_ID_COL,DEFAULT_INVIEW_ARTICLES_COL, DEFAULT_USER_COL, DEFAULT_KNOWN_USER_COL
 from src.utils.get_training_args import get_training_args
 from src.utils.print_mean_std import print_mean_std
 from src.data.original_model_datamodule import OriginalModelDatamodule
@@ -68,10 +68,23 @@ def compute_catalog_coverage(df: pl.DataFrame, n_articles_test: int):
     Returns:
         The catalog coverage as a float.
     """
-    recommended_articles_at_5_array = df["scores"].apply(lambda x: x.sort(reverse=True)[:5]).to_numpy()
+        # Function to sort articles by scores and get top 5
+    def get_top_5_articles(articles, scores):
+        sorted_indices = np.argsort(scores)[::-1]  # Indices of scores sorted in descending order
+        top_5_indices = sorted_indices[:5]         # Get the top 5 indices
+        top_5_articles = [articles[i] for i in top_5_indices]  # Get the articles corresponding to the top 5 indices
+        return top_5_articles
 
-    coverage, coverage_frac = Coverage(recommended_articles_at_5_array, np.arange(n_articles_test))
+    # Apply the function to each row
+    recommended_articles_at_5_array = df.with_columns(
+        pl.struct([DEFAULT_INVIEW_ARTICLES_COL, "scores"]).apply(lambda x: get_top_5_articles(x[DEFAULT_INVIEW_ARTICLES_COL], x["scores"])).alias("recommended_articles_at_5")
+    )["recommended_articles_at_5"].to_list()
 
+    #recommended_articles_at_5_array = df["inview_articles"].apply(lambda x: x.sort(descending=True)[:5]).to_list()
+    print(recommended_articles_at_5_array)
+    calculator = Coverage()
+
+    coverage, coverage_frac = calculator(np.array(recommended_articles_at_5_array), np.arange(n_articles_test))
     print(f"Catalog coverage@5 frac: {coverage_frac:.2f}, catelog coverage: {coverage:.2f}")
     return coverage, coverage_frac
     
@@ -265,10 +278,14 @@ def train_and_test(data_download_path: str, args):
     wandb.finish()
 
     metrics_coverage = {'coverage': coverage, 'coverage_frac': coverag_frac}
-    metrics[0] = {**metrics[0], **metrics_coverage}
-    metrics[1] = {**metrics[1], **metrics_coverage}
+    metrics0 = metrics[0]
+    metrics1 = metrics[1]
 
-    return metrics
+    metrics0 = {**metrics[0], **metrics_coverage}
+    metrics1 = {**metrics[1], **metrics_coverage}
+    print(metrics0)
+    print(metrics_coverage)
+    return metrics0, metrics1
 
 def main():
     args = get_training_args()
