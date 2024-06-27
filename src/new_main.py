@@ -68,7 +68,7 @@ def compute_catalog_coverage(df: pl.DataFrame, n_articles_test: int):
     Returns:
         The catalog coverage as a float.
     """
-    recommended_articles_at_5_array = df["scores"].map(lambda x: x.sort(reverse=True)[:5]).to_numpy()
+    recommended_articles_at_5_array = df["scores"].apply(lambda x: x.sort(reverse=True)[:5]).to_numpy()
 
     coverage, coverage_frac = Coverage(recommended_articles_at_5_array, np.arange(n_articles_test))
 
