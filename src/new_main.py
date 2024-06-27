@@ -28,6 +28,7 @@ from copy import copy
 import os
 from torchmetrics import AUROC
 from torchmetrics import F1Score as F1SCORE
+from src.ebrec.evaluation import Coverage
 
 device_name = "cuda" if torch.cuda.is_available() else "cpu"
 device = torch.device(device_name)
@@ -57,6 +58,22 @@ def count_users(df: pl.DataFrame, known_user_col: str = DEFAULT_KNOWN_USER_COL):
     num_known_users = df.filter(pl.col(known_user_col) == True).height
     num_unknown_users = df.filter(pl.col(known_user_col) == False).height
     return num_known_users, num_unknown_users
+
+def compute_catalog_coverage(df: pl.DataFrame, n_articles_test: int):
+    """
+    Computes the catalog coverage of the recommendations.
+    Args:
+        df: A Polars DataFrame object with a column of recommended articles.
+        n_articles_test: The number of articles in the test set.
+    Returns:
+        The catalog coverage as a float.
+    """
+    recommended_articles_at_5_array = df["scores"].map(lambda x: x.sort(reverse=True)[:5]).to_numpy()
+
+    coverage, coverage_frac = Coverage(recommended_articles_at_5_array, np.arange(n_articles_test))
+
+    print(f"Catalog coverage@5 frac: {coverage_frac:.2f}, catelog coverage: {coverage:.2f}")
+    
 
 def train_and_test(data_download_path: str, args):
     datamodule = OriginalModelDatamodule(
@@ -197,6 +214,8 @@ def train_and_test(data_download_path: str, args):
     test_df = add_prediction_scores(test_df, scores.tolist()).pipe(
         add_known_user_column, known_users=datamodule.data_train.df_behaviors[DEFAULT_USER_COL]
     )
+
+    compute_catalog_coverage(test_df, n_articles_test = datamodule.data_test.num_articles)
 
     metrics = None, None
     if args.use_labeled_test_set:
