@@ -73,6 +73,7 @@ def compute_catalog_coverage(df: pl.DataFrame, n_articles_test: int):
     coverage, coverage_frac = Coverage(recommended_articles_at_5_array, np.arange(n_articles_test))
 
     print(f"Catalog coverage@5 frac: {coverage_frac:.2f}, catelog coverage: {coverage:.2f}")
+    return coverage, coverage_frac
     
 
 def train_and_test(data_download_path: str, args):
@@ -215,7 +216,7 @@ def train_and_test(data_download_path: str, args):
         add_known_user_column, known_users=datamodule.data_train.df_behaviors[DEFAULT_USER_COL]
     )
 
-    compute_catalog_coverage(test_df, n_articles_test = datamodule.data_test.num_articles)
+    coverage, coverag_frac = compute_catalog_coverage(test_df, n_articles_test = datamodule.data_test.num_articles)
 
     metrics = None, None
     if args.use_labeled_test_set:
@@ -262,6 +263,10 @@ def train_and_test(data_download_path: str, args):
         )
 
     wandb.finish()
+
+    metrics_coverage = {'coverage': coverage, 'coverage_frac': coverag_frac}
+    metrics[0] = {**metrics[0], **metrics_coverage}
+    metrics[1] = {**metrics[1], **metrics_coverage}
 
     return metrics
 
