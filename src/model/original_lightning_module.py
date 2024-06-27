@@ -138,7 +138,7 @@ class OriginalModule(LightningModule):
 
         return loss
 
-    def compute_scores(self, user_projected, news_projected, user_indices, news_indices, labels, mode):
+    def compute_scores(self, user_projected, news_projected, user_indices, news_indices, labels, mode, user_news, news_user):
         if self.more_labels and mode != "test" and mode != "val":
             if mode == "train":
                 user_edge_index = self.train_user_edge_index
@@ -148,16 +148,22 @@ class OriginalModule(LightningModule):
                 assert False, "Test mode not implemented"
             # get label matrix using a list of sets for each user
             labels = torch.empty([len(user_indices), len(user_indices)], dtype=torch.float32)
+            mask = torch.zeros_like(labels)
             # converting to np is way faster than gpu_tensor.item()
             np_user_indices = user_indices.cpu().numpy()
             np_news_indices = news_indices.cpu().numpy()
             for i in range(len(np_user_indices)):
                 for j in range(len(np_news_indices)):
                     labels[i, j] = 1 if np_news_indices[j] in user_edge_index[np_user_indices[i]] else 0
+                    leaked_edge = i in news_user[j] or j in user_news[i]
+                    # mask will zero out label and score
+                    mask[i, j] = 0 if leaked_edge else 1
+            labels = labels * mask
             labels = labels.flatten().to(user_projected.device)
 
             # matmul to get a matrix of similarities
             scores = torch.matmul(user_projected, news_projected.T)
+            scores = scores * mask.to(scores.device)
             scores = scores.flatten()
         else:
             scores = self.net.get_edge_probability(user_projected, news_projected)
@@ -171,7 +177,7 @@ class OriginalModule(LightningModule):
 
         user_embeddings, news_embeddings = self.net(user_indices, news_indices, user_news, news_user)
         user_projected, news_projected = self.net.apply_projection(user_embeddings, news_embeddings)
-        scores, labels = self.compute_scores(user_projected, news_projected, user_indices, news_indices, labels, mode=mode)
+        scores, labels = self.compute_scores(user_projected, news_projected, user_indices, news_indices, labels, mode, user_news, news_user)
         loss = self.compute_loss(scores, labels, user_embeddings, news_embeddings)
 
         if ret_scores:

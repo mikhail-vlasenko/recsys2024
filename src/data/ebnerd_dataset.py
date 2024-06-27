@@ -371,6 +371,9 @@ class EbnerdDataset(Dataset):
                 df_behaviors = df_behaviors.head(1000000)
                 #df_behaviors = df_behaviors.sample(fraction=fraction)
 
+            # turning this on proves our method trains
+            # df_behaviors = df_behaviors.head(1000)
+
             if data_slice is not None:
                 start, end = data_slice
                 start_index = int(start * len(df_behaviors))
