@@ -119,8 +119,8 @@ def train_and_test(data_download_path: str, args):
     test_article_ids = np.array(datamodule.data_test.df_behaviors[DEFAULT_INVIEW_ARTICLES_COL])
     test_article_ids = set(np.unique(test_article_ids).tolist())
 
-    print(f"val has {len(val_article_ids)} articles. of which {val_article_ids.intersection(train_article_ids)} are in train")
-    print(f"test has {len(test_article_ids)} articles. of which {test_article_ids.intersection(train_article_ids)} are in train")
+    print(f"val has {len(val_article_ids)} articles. of which {len(val_article_ids.intersection(train_article_ids))} are in train")
+    print(f"test has {len(test_article_ids)} articles. of which {len(test_article_ids.intersection(train_article_ids))} are in train")
 
     #the last created dataset has the largest numeber
     n_users = datamodule.data_test.num_users
